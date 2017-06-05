@@ -1,2 +1,2 @@
 #!/bin/bash
-pkexec "usr/bin/searchExamServer" "$@"
+pkexec "/usr/bin/searchExamServer" "$@"
