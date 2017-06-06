@@ -335,6 +335,9 @@ sed 's/#domain-name=local/domain-name=.alocal/' /etc/avahi/avahi-daemon.conf >/r
 # apply specific config if available
 setup_chroot
 
+# remove policykit action for lernstick welcome application
+rm -f /run/initramfs/newroot/usr/share/polkit-1/actions/ch.lernstick.welcome.policy
+
 if [ -n "${actionConfig}" ]; then
   # get the config
   config="$(${wget} -qO- "${urlConfig}")"
@@ -374,6 +377,20 @@ if [ -n "${actionConfig}" ]; then
     chroot /run/initramfs/newroot systemctl disable lernstick-firewall.service
   fi
 
+  # config->screenshots
+  if [ "$(config_value "screenshots")" = "False" ]; then
+    chroot /run/initramfs/newroot sed -i 's/BackupScreenshot=.*/BackupScreenshot=false/' /etc/lernstickWelcome 
+  else
+    chroot /run/initramfs/newroot sed -i 's/BackupScreenshot=.*/BackupScreenshot=true/' /etc/lernstickWelcome
+    chroot /run/initramfs/newroot sed -i 's/Backup=.*/Backup=true/' /etc/lernstickWelcome
+  fi
+
+  # config->url_whitelist
+  if [ "$(config_value "url_whitelist")" != "" ]; then
+    config_value "url_whitelist" | tee -a /run/initramfs/newroot/etc/lernstick-firewall/url_whitelist
+  fi
+
+
 else
   # these are the default values, if the exam server does not provide a config file and the exam file has not configured them
   $DEBUG && >&2 echo "no config available, setting default values"
@@ -400,6 +417,7 @@ echo "${sshKey}" >>"/run/initramfs/backup/root/.ssh/authorized_keys"
 echo "tcp ${gladosIp} 22" >>/run/initramfs/backup/etc/lernstick-firewall/net_whitelist_input
 echo "${gladosProto}://${gladosIp}:${gladosPort}" >>/run/initramfs/backup/etc/lernstick-firewall/url_whitelist
 echo "tcp ${gladosIp} ${gladosPort}" >>/run/initramfs/backup/etc/lernstick-firewall/net_whitelist
+sort -u -o /run/initramfs/backup/etc/lernstick-firewall/url_whitelist /run/initramfs/backup/etc/lernstick-firewall/url_whitelist
 
 sleep 1
 exec 1>&-; exec 1>&0
@@ -419,4 +437,3 @@ else
   clientState "continue bootup"
   halt
 fi
-
