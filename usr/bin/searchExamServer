@@ -215,16 +215,18 @@ exec 1>&-; exec 1>&0
 until validExamFile; do
 
   # loop until the user provided a valid token
-  until [[ ${tk} =~ ^[0-9a-z]{8,}$ ]]; do
-    token="$(cat /tmp/token)"
-    tk="$(${zenity} --entry --title="Exam Token" --text="Please enter the token given on your exam sheet:" --entry-text "${token}")"
-    retval=$?
-    token=$tk
+  if [ "${skip}" != "true" ]; then
+    until [[ ${tk} =~ ^[0-9a-z]{8,}$ ]]; do
+      token="$(cat /tmp/token)"
+      tk="$(${zenity} --entry --title="Exam Token" --text="Please enter the token given on your exam sheet:" --entry-text "${token}")"
+      retval=$?
+      token=$tk
 
-    # store the token in /tmp
-    [ -n "${token}" ] && echo "${token}" >/tmp/token
-    [ ${retval} = 1 ] && do_exit
-  done
+      # store the token in /tmp
+      [ -n "${token}" ] && echo "${token}" >/tmp/token
+      [ ${retval} = 1 ] && do_exit
+    done
+  fi
   tk=""
 
   # replace the placeholder {token} in the URLs
@@ -262,9 +264,22 @@ EOF
     # something went wrong
     code="$(${python} -c 'import sys, json; print json.load(sys.stdin)["code"]' <"${examSquashfs}")"
     msg="$(${python} -c 'import sys, json; print json.load(sys.stdin)["msg"]' <"${examSquashfs}")"
-    ${zenity} --error --title "Error ${code}" --text "${msg}"
+    if [ "${code}" = "509" ]; then
+      wait="$(${python} -c 'import sys, json; print json.load(sys.stdin)["wait"]' <"${examSquashfs}")"
+      skip="true"
+      for i in $(seq 1 ${wait}); do
+        echo "scale=2; ${i}/(${wait}/100)" | bc
+        o=$((${wait} - $i))
+        echo "#${msg//\{i\}/$o}" || break
+        sleep 1
+      done | ${zenity} --progress --no-cancel --title="Continue" --text="${msg//\{i\}/$wait}" --percentage=0 --auto-close
+    else
+      ${zenity} --error --title "Error ${code}" --text "${msg}"
+      skip="false"
+    fi
   elif ! file "${examSquashfs}" | grep -qi "squashfs filesystem"; then
     ${zenity} --error --title "Unknown error" --text "An unknown error occured."
+    skip="false"
   fi
 
 done
@@ -387,6 +402,8 @@ if [ -n "${actionConfig}" ]; then
 
   # config->url_whitelist
   if [ "$(config_value "url_whitelist")" != "" ]; then
+    #wh="$(config_value "url_whitelist")"
+    #echo "${wh}" | tee -a /run/initramfs/newroot/etc/lernstick-firewall/url_whitelist
     config_value "url_whitelist" | tee -a /run/initramfs/newroot/etc/lernstick-firewall/url_whitelist
   fi
 
@@ -423,7 +440,7 @@ sleep 1
 exec 1>&-; exec 1>&0
 
 if $DEBUG; then
-  if ${zenity} --question --title="Continue" --text="The system setup is done Continue?"; then
+  if ${zenity} --question --title="Continue" --text="The system setup is done. Continue?"; then
     clientState "continue bootup"
     halt
   fi
