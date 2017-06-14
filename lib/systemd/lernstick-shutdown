@@ -51,7 +51,12 @@ if [ -f "/restore" ]; then
   # get data from info file
   eval $(cat /info)
   mkdir -p /usb
-  mount ${partitionSystem} /usb
+  oldMnt="$(awk -v m="$partitionSystem" '$1==m{print $2}' /proc/mounts)"
+  if [ -z "${oldMnt}" ]; then
+    mount ${partitionSystem} /usb
+  else
+    mount -o move "${oldMnt}" /usb
+  fi
 
   # mount the filesystems
   mount -o loop -t squashfs /usb/live/filesystem.squashfs /base
