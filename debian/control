@@ -1,0 +1,14 @@
+Source: lernstick-exam-client
+Section: net
+Priority: optional
+Maintainer: Roman Gruber <roman.gruber@bwzofingen.ch>
+Build-Depends: debhelper (>=9)
+Standards-Version: 3.9.6
+Homepage: <insert the upstream URL, if relevant>
+#Vcs-Git: git://anonscm.debian.org/collab-maint/lernstick-exam-client.git
+#Vcs-Browser: https://anonscm.debian.org/cgit/collab-maint/lernstick-exam-client.git
+
+Package: lernstick-exam-client
+Architecture: all
+Depends: wget, python (>= 2.7), zenity, coreutils, iptables
+Description: Client for the Lernstick exam server

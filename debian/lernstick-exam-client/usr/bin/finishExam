@@ -1,0 +1,68 @@
+#!/bin/bash
+
+wget="/usr/bin/wget"
+zenity="/usr/bin/zenity"
+python="/usr/bin/python"
+backupStateFile="/home/user/shutdown"
+
+export DISPLAY=:0
+
+# transmit state to server
+function clientState()
+{
+  echo "$1"
+  ${wget} -qO- "${urlNotify//\{state\}/$1}" 2>&1 >/dev/null
+}
+
+rm -f "${backupStateFile}" >/dev/null 2>&1
+
+# source the info file
+if [ -e /info ]; then
+  source /info
+else
+  ${zenity} --error --title "Error" --text "Error: info file not present."
+  exit
+fi
+
+if ! ${zenity} --question --title="Finish Exam" --text="Are you sure you want to finish your exam? If you click yes, you will not be able to continue your exam!"; then
+  exit
+fi
+
+exec 1> >(${zenity} --progress --pulsate --no-cancel --title="Finishing exam" --text="Please wait while processing your request." --auto-close)
+
+# initiate the finish process
+json="$(${wget} -qO- "${urlFinish}")"
+retval=$?
+if [ ${retval} -ne 0 ]; then >&2 echo "wget failed while finishing the exam (return value: ${retval})."; exit; fi
+
+# parse json data
+code="$(echo "${json}" | ${python} -c 'import sys, json; print json.load(sys.stdin)["code"]')"
+msg="$(echo "${json}" | ${python} -c 'import sys, json; print json.load(sys.stdin)["msg"]')"
+
+if [ "${code}" != "200" ]; then
+  ${zenity} --error --title "Error ${code}" --text "${msg}"
+  exit
+fi
+
+exec 1>&-; exec 1>&0
+
+clientState "waiting for last backup."
+
+# At this point, the last backup is initiated on the server. We now have to wait until
+# it's done. The server will write the state of the backup in a file. As soon as the
+# file contain a single "0", the backup is done and the script is alowwed to continue
+exec 1> >(${zenity} --progress --pulsate --no-cancel --title="Waiting for server" --text="Waiting for the latest backup to complete. This may take a few minutes..." --auto-close)
+backupState=$(cat "${backupStateFile}" 2>/dev/null)
+until [ "${backupState}" = "0" ]; do
+  [ -n "${backupState}" ] && echo "#${backupState}"
+  sleep 2
+  backupState=$(cat "${backupStateFile}" 2>/dev/null)
+done
+exec 1>&-; exec 1>&0
+
+# Ask the user to shutdown
+if ${zenity} --question --title="Shutdown" --text="The exam was successfully handed in. Continue with shutting down the system?"; then
+  clientState "shutting down."
+  /sbin/shutdown -h now
+fi
+

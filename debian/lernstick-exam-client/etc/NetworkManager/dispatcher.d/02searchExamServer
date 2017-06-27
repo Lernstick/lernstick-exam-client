@@ -1,0 +1,43 @@
+#!/bin/bash
+
+wget="/usr/bin/wget"
+CONFIG_FILE="/etc/lernstickWelcome"
+
+# transmit state to server
+function clientState()
+{
+  echo "$1"
+  ${wget} -qO- "${urlNotify//\{state\}/$1}" 2>&1 >/dev/null
+}
+
+# when the /booted file already exists, this is a network reconnect 
+if [ -e /booted ] && [ -e /info ] && [ "$2" = "up" ]; then
+  source /info
+  c="$(($(cat /$1)+1))";
+  echo -n "$c" >/$1
+  clientState "$1 reconnected (${c})."
+  exit
+fi
+
+# this happens when the network reconnects after booting up
+if [ -e /info ] && [ "$2" = "up" ]; then
+  #just booted into exam
+  source /info
+  clientState "bootup complete."
+  touch /booted
+  exit
+fi
+
+# do nothing if the arguments differ
+if [ -z "$1" ] || [ -z "$2" ] || [ "$2" != "up" ] || [ -e /info ]; then
+  exit 1;
+fi
+
+# if the flag is set, start the search script in the background
+if grep -q "SearchExamServer=true" ${CONFIG_FILE}
+then
+  exec /usr/bin/searchExamServer $1 $2 &
+fi
+
+exit
+
