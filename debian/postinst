@@ -21,7 +21,6 @@ set -e
 case "$1" in
     configure)
     grep -q "SearchExamServer" /etc/lernstickWelcome || echo "SearchExamServer=true" >>/etc/lernstickWelcome
-    service NetworkManager restart
     ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)
