@@ -66,7 +66,17 @@ if [ -f "/restore" ]; then
 
   # mount the filesystems
   mount -o loop -t squashfs /usb/live/filesystem.squashfs /base
-  mount -o loop -t squashfs /squashfs/exam.squashfs /exam
+
+  if [ -e /squashfs/exam.squashfs ]; then
+    mount -o loop -t squashfs /squashfs/exam.squashfs /exam
+  fi
+
+  if [ -e /squashfs/exam.zip ]; then
+    unzip -o /squashfs/exam.zip -d /exam
+    chown -R 1000:1000 /exam/home/user 2>/dev/null
+    chown -R 0:0 /exam/home/user/Screenshots 2>/dev/null
+  fi
+
 #  mount -t tmpfs tmpfs /tmpfs
 #  mount -t aufs -o br=/tmpfs=rw:/backup=ro:/exam=ro:/base=ro none "/newroot"
   mount -t aufs -o br=/backup=rw:/exam=ro:/base=ro none "/newroot"
