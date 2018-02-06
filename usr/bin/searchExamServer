@@ -13,6 +13,18 @@ infoFile="/run/initramfs/info"
 timeout=10
 configFile="/etc/lernstick-exam-client.conf"
 
+wgetErrors=(
+  "No problems occurred."
+  "Generic error code."
+  "Parse error—for instance, when parsing command-line options, the ‘.wgetrc’ or ‘.netrc’..."
+  "File I/O error."
+  "Network failure."
+  "SSL verification failure."
+  "Username/password authentication failure."
+  "Protocol errors."
+  "Server issued an error response."
+)
+
 # transmit state to server
 function clientState()
 {
@@ -30,35 +42,12 @@ function do_exit()
   iptables-save | grep -v "searchExamServer" | iptables-restore
 
   # unmount the filesystem
-  umount /run/initramfs/newroot
-  umount -l /run/initramfs/{base,exam}
+  umount /run/initramfs/newroot 2>/dev/null
+  umount -l /run/initramfs/{base,exam} 2>/dev/null
+  kill 0 # a bit brutal, but stops the whole process group
   exit
 }
 trap do_exit EXIT
-
-# vertify MD5 checksum of exam file
-function validExamFile()
-{
-  if [ -e "${examSquashfs}" ]; then
-    if file "${examSquashfs}" | grep -qi "squashfs filesystem"; then
-      exec 1> >(${zenity} --progress --pulsate --no-cancel --title="Verifying" --text="Verifying exam file." --auto-close)
-      clientState "verifying md5 sum"
-      md5Local="$(${md5sum} "${examSquashfs}" | cut -c1-32)"
-      md5Srv="$(${wget} ${wgetOptions} -qO- "${urlMd5}")"
-      exec 1>&-; exec 1>&0
-      $DEBUG && >&2 echo "${md5Local} - ${md5Srv} - ${urlMd5}"
-      
-      if [ "${md5Local}" = "${md5Srv}" ]; then
-        return 0
-      else
-        clientState "md5 sum wrong"
-        ${zenity} --error --title "MD5 sum wrong" --text "MD5 check failed, please try again."
-      fi
-    fi
-  fi
-  rm -f "${examSquashfs}"
-  return 1
-}
 
 # find all instances of this script an stop them
 function killRunningInstances()
@@ -86,8 +75,8 @@ function config_value()
     config="$(${wget} ${wgetOptions} -qO- "${urlConfig}")"
     retval=$?
     if [ ${retval} -ne 0 ]; then
-      >&2 echo "wget failed while fetching the system config (return value: ${retval})."
-      ${zenity} --error --title "Wget error" --text "wget failed while fetching the system config (return value: ${retval})."
+      >&2 echo "wget failed while fetching the system config. Error: ${wgetErrors[$retval]} (${retval})."
+      ${zenity} --error --title "Wget error" --text "wget failed while fetching the system config. Error: ${wgetErrors[$retval]} (${retval})."
       do_exit
     fi
   fi
@@ -97,6 +86,25 @@ function config_value()
   echo "$v"
 }
 
+
+cat <<'EOF' >/tmp/convert.py
+import re
+import sys
+import fileinput
+
+while 1:
+    try:
+        line = sys.stdin.readline()
+    except KeyboardInterrupt:
+        break
+
+    if not line:
+        break
+
+    decimals_to_hex = re.sub(r'\\(\d+)', lambda match: '\\x{:x}'.format(int(match.group(1))), str.encode(line[:-1]))
+    result = decimals_to_hex.decode('string_escape')
+    print(result)
+EOF
 
 # start here
 killRunningInstances
@@ -112,27 +120,64 @@ mkdir -p "/run/initramfs/"{newroot,base,exam,tmpfs,squashfs,backup/home/user}
 chown user:user "/run/initramfs/backup/home/user"
 #>"${examSquashfs}"
 rm -f "${retoreStateFile}" 2>/dev/null
+rm -f /tmp/zenity1 2>/dev/null
 
 [ -r "${infoFile}" ] && . ${infoFile}
 
-# redirect STDOUT to zenity
-exec 1> >(${zenity} --progress --pulsate --no-cancel --title="Search" --text="Searching for exam server." --auto-close)
-
+# if a configfile is used, don't display a selection list and use the config values instead
 if [ -r "${configFile}" ]; then
+  fixed="true"
+  
+  exec 1> >(${zenity} --progress --pulsate --no-cancel --title="Search" --text="Searching for exam server." --auto-close)
+
   $DEBUG && >&2 echo "Configfile found, using ${configFile}."
   . "${configFile}"
   AVAHI="$(cat "${configFile}")"
-  eth="$(ip -s route get 192.168.0.241 | perl -ne 'print $1 if /dev[\s]+([^\s]+)/')"
+  eth="$(ip -s route get ${gladosIp} | perl -ne 'print $1 if /dev[\s]+([^\s]+)/')"
+
 else
-  # run avahi-browse for n seconds or until a exam server was found
-  AVAHI="$(( /usr/bin/timeout ${timeout} avahi-browse -rp --no-db-lookup _http._tcp & echo $! >&3 ) 3>/tmp/pid | \
-    awk -W interactive -F";" '$1=="=" && $3=="IPv4" && $4~/Glados/{print;"cat /tmp/pid" | getline p; system("kill "p);}')"
-  # $8~/[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/
+  fixed="false"
+
+  # show the selection list until the user has chosen one
+  while [ -z "$(cat /tmp/zenity1 2>/dev/null)" ]; do
+
+    # display the list
+    exec 1> >(${zenity} --list \
+      --title="Searching for exam server." \
+      --text "The following list of exam servers was found in the network. Please select the one you want to use." \
+      --column "#" \
+      --column "Name" \
+      --column "IP" \
+      --column "Host" \
+      --column "Port" \
+      --column "Protocol" \
+      --column "Interface" \
+      --hide-column=1 \
+      --width=700 \
+      --height=220 >/tmp/zenity1 || do_exit; kill $(cat /tmp/pid1) 2>/dev/null)
+
+    # retrieve exam servers in the net
+    ( avahi-browse -rp --no-db-lookup _http._tcp & echo $! >&3 ) 3>/tmp/pid1 | \
+      awk -W interactive -F";" 'BEGIN{d=0;}
+        $1=="=" && $3=="IPv4" && $10~/Glados/{
+          print $0 > "/tmp/avahi-orig";
+          printf "%d\n%s\n%s\n%s\n%s\n%s\n%s\n", ++d, $4, $8, $7, $9, $8==443 ? "https" : "http", $2;
+        }' | \
+      ${python} -u /tmp/convert.py
+      
+    exec 1>&-; exec 1>&0
+
+  done
+
+  # get the choice
+  num=$(cat /tmp/zenity1)
+  AVAHI="$(sed "${num}q;d" /tmp/avahi-orig)"
 
   # parse the output
   gladosIp="$(echo "${AVAHI}" | awk -F";" '{print $8;exit}')"
   gladosHost="$(echo "${AVAHI}" | awk -F";" '{print $7;exit}')"
   gladosPort="$(echo "${AVAHI}" | awk -F";" '{print $9;exit}')"
+  gladosDesc="$(echo "${AVAHI}" | awk -F";" '{print $4;exit}' | ${python} -u /tmp/convert.py)"
   eth="$(echo "${AVAHI}" | awk -F";" '{print $2;exit}')"
 
   if [ "$gladosPort" = "443" ]; then
@@ -143,63 +188,35 @@ else
 
 fi
 
-if [ -z "$gladosIp" ] || [ -z "$gladosPort" ] || [ -z "$gladosHost" ]; then
+if [ -z "$gladosIp" ] || [ -z "$gladosPort" ]; then
   $DEBUG && >&2 echo "Glados host not found."
+  zenity --error --title="Error" --text="Glados host not found."
   do_exit
 fi
 
 # parse the action URLs
-if [[ $AVAHI =~ actionDownload=\'([^\']+)\' ]]; then
-  actionDownload="${gladosProto}://${gladosIp}:${gladosPort}/${BASH_REMATCH[1]}"
-else
-  $DEBUG && >&2 echo "actionDownload not found in txt field."
-  do_exit
-fi
-
-if [[ $AVAHI =~ actionFinish=\'([^\']+)\' ]]; then
-  actionFinish="${gladosProto}://${gladosIp}:${gladosPort}/${BASH_REMATCH[1]}"
-else
-  $DEBUG && >&2 echo "actionFinish not found in txt field."
-  do_exit
-fi
-
-if [[ $AVAHI =~ actionNotify=\'([^\']+)\' ]]; then
-  actionNotify="${gladosProto}://${gladosIp}:${gladosPort}/${BASH_REMATCH[1]}"
-else
-  $DEBUG && >&2 echo "actionNotify not found in txt field."
-  do_exit
-fi
-
-if [[ $AVAHI =~ actionSSHKey=\'([^\']+)\' ]]; then
-  actionSSHKey="${gladosProto}://${gladosIp}:${gladosPort}/${BASH_REMATCH[1]}"
-else
-  $DEBUG && >&2 echo "actionSSHKey not found in txt field."
-  do_exit
-fi
-
-if [[ $AVAHI =~ actionMd5=\'([^\']+)\' ]]; then
-  actionMd5="${gladosProto}://${gladosIp}:${gladosPort}/${BASH_REMATCH[1]}"
-else
-  $DEBUG && >&2 echo "actionMd5 not found in txt field."
-  do_exit
-fi
-
-if [[ $AVAHI =~ actionConfig=\'([^\']+)\' ]]; then
-  actionConfig="${gladosProto}://${gladosIp}:${gladosPort}/${BASH_REMATCH[1]}"
-else
-  $DEBUG && >&2 echo "actionConfig not found in txt field."
-fi
+for action in Download Finish Notify SSHKey Md5 Config; do
+  if [[ $AVAHI =~ action${action}=\'([^\']+)\' ]]; then
+    declare action${action}="${gladosProto}://${gladosIp}:${gladosPort}/${BASH_REMATCH[1]}"
+  else
+    $DEBUG && >&2 echo "action${action} not found in txt field."
+    zenity --error --title="Error" --text="action${action} not found in txt field."
+    do_exit
+  fi
+done
 
 $DEBUG && >&2 echo "Exam server found."
 echo "#Exam server found."
 sleep 1
 
-# redirect STDOUT back to the console
-exec 1>&-; exec 1>&0
+if [ "$fixed" = "true" ]; then
+  # redirect STDOUT back to the console
+  exec 1>&-; exec 1>&0
 
-# Ask the user to proceed
-if ! ${zenity} --question --title="Continue" --text="An exam server (${gladosIp}) was found in the network (${eth}). Switch to exam mode?"; then
-  do_exit
+  # Ask the user to proceed
+  if ! ${zenity} --question --title="Continue" --text="An exam server (${gladosDesc}) was found in the network (${eth}). Switch to exam mode?"; then
+    do_exit
+  fi
 fi
 
 # open ports in the firewall
@@ -209,15 +226,15 @@ service lernstick-firewall reload
 iptables -I INPUT -p tcp --dport 22 -s ${gladosIp} -m comment --comment "searchExamServer" -j ACCEPT
 iptables -I OUTPUT -p tcp --dport ${gladosPort} -d ${gladosIp} -m comment --comment "searchExamServer" -j ACCEPT
 
-exec 1> >(${zenity} --progress --pulsate --no-cancel --title="SSH Key" --text="Fetching SSH Key from the exam server." --auto-close)
+exec 1> >(${zenity} --progress --pulsate --no-cancel --title="SSH Key" --text="Fetching SSH Key from the server." --auto-close)
 
 # get the SSH key
 sshKey="$(${wget} ${wgetOptions} -qO- "${actionSSHKey}")"
 
 retval=$?
 if [ ${retval} -ne 0 ]; then
-  >&2 echo "wget failed while fetching the SSH key (return value: ${retval})."
-  ${zenity} --error --title "Wget error" --text "wget failed while fetching the SSH key (return value: ${retval})."
+  >&2 echo "wget failed while fetching the SSH key. Error: ${wgetErrors[$retval]} (${retval})."
+  ${zenity} --error --title "Wget error" --text "wget failed while fetching the SSH key. Error: ${wgetErrors[$retval]} (${retval})."
   do_exit
 fi
 
@@ -263,3 +280,4 @@ EOF
 exec 1>&-; exec 1>&0
 
 /usr/bin/firefox -P "searchExamServer" -width 800 -height 310 -chrome "/run/initramfs/init.html"
+
