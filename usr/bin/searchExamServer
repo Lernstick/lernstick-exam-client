@@ -12,6 +12,7 @@ retoreStateFile="/run/initramfs/restore"
 infoFile="/run/initramfs/info"
 timeout=10
 configFile="/etc/lernstick-exam-client.conf"
+pid=$$
 
 wgetErrors=(
   "No problems occurred."
@@ -34,6 +35,17 @@ function clientState()
   $DEBUG && >&2 echo "New client state: $1"
 }
 
+function killtree()
+{
+  local _pid=$1
+  local _sig=${2:-15}
+  #kill -stop ${_pid} # needed to stop quickly forking parent from producing children between child killing and parent killing
+  for _child in $(ps -o pid --no-headers --ppid ${_pid}); do
+    killtree ${_child} ${_sig}
+  done
+  [ "${BASHPID}" = "${_pid}" ] || kill -${_sig} ${_pid} 2>/dev/null
+}
+
 function do_exit()
 {
   $DEBUG && >&2 echo "exiting cleanly"
@@ -44,7 +56,8 @@ function do_exit()
   # unmount the filesystem
   umount /run/initramfs/newroot 2>/dev/null
   umount -l /run/initramfs/{base,exam} 2>/dev/null
-  kill 0 # a bit brutal, but stops the whole process group
+
+  killtree $pid
   exit
 }
 trap do_exit EXIT
@@ -164,7 +177,7 @@ else
           printf "%d\n%s\n%s\n%s\n%s\n%s\n%s\n", ++d, $4, $8, $7, $9, $8==443 ? "https" : "http", $2;
         }' | \
       ${python} -u /tmp/convert.py
-      
+
     exec 1>&-; exec 1>&0
 
   done
