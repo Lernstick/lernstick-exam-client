@@ -21,8 +21,8 @@ set -e
 
 case "$1" in
     purge|remove|upgrade|failed-upgrade|abort-install|abort-upgrade|disappear)
-    dpkg-divert --remove --package lernstick-exam-client --rename /lib/systemd/lernstick-shutdown
-    service NetworkManager restart
+        dpkg-divert --remove --package lernstick-exam-client --rename /lib/systemd/lernstick-shutdown
+        service NetworkManager restart
     ;;
 
     *)

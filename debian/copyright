@@ -3,7 +3,7 @@ Upstream-Name: lernstick-exam-client
 Source: https://github.com/imedias/lernstick-exam-client
 
 Files: *
-Copyright: 2017 Roman Gruber <roman.gruber@bwzofingen.ch>
+Copyright: 2018 Roman Gruber <roman.gruber@bwzofingen.ch>
 License: GPL-2+
 
 Files: debian/*

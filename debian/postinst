@@ -20,7 +20,7 @@ set -e
 
 case "$1" in
     configure)
-    grep -q "SearchExamServer" /etc/lernstickWelcome || echo "SearchExamServer=true" >>/etc/lernstickWelcome
+        grep -q "SearchExamServer" /etc/lernstickWelcome || echo "SearchExamServer=true" >>/etc/lernstickWelcome
     ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)

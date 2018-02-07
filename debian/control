@@ -11,4 +11,4 @@ Homepage: <insert the upstream URL, if relevant>
 Package: lernstick-exam-client
 Architecture: all
 Depends: wget, python (>= 2.7), zenity, coreutils, iptables
-Description: Client for the Lernstick exam server
+Description: Client for the Lernstick exam server GLaDOS
