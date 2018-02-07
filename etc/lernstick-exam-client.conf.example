@@ -1,0 +1,16 @@
+# This is an example configuration file
+#
+# For more information please visit https://github.com/imedias/glados/blob/master/howtos/client-config.md
+
+gladosIp="1.2.3.4"
+gladosHost="examsrv"
+gladosPort=80
+gladosProto="http"
+gladosDesc="Description"
+
+actionDownload='glados/index.php?r=ticket/download&token={token}'
+actionFinish='glados/index.php?r=ticket/finish&token={token}'
+actionNotify='glados/index.php?r=ticket/notify&token={token}&state={state}'
+actionSSHKey='glados/index.php?r=ticket/ssh-key'
+actionMd5='glados/index.php?r=ticket/md5&token={token}'
+actionConfig='glados/index.php?r=ticket/config&token={token}'
