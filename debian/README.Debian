@@ -1,6 +1,9 @@
 lernstick-exam-client for Debian
 -------------------------------
 
-<possible notes regarding this package - if none, delete this file>
+Build the package with
+
+ debian/rules clean
+ debuild -b -uc -us
 
  -- Roman Gruber <roman.gruber@bwzofingen.ch>  Tue, 27 Jun 2017 11:31:47 +0200
