@@ -53,6 +53,10 @@ function do_exit()
   # revert all changes to iptables
   iptables-save | grep -v "searchExamServer" | iptables-restore
 
+  # cleanup firewall whitelist
+  diff --unchanged-group-format="" <(echo "^${gladosProto}://${gladosIp}" | sed 's/\./\\\./g') /etc/lernstick-firewall/url_whitelist >/tmp/url_whitelist
+  cat /tmp/url_whitelist >/etc/lernstick-firewall/url_whitelist
+
   # unmount the filesystem
   umount /run/initramfs/newroot 2>/dev/null
   umount -l /run/initramfs/{base,exam} 2>/dev/null
@@ -232,14 +236,14 @@ if [ "$fixed" = "true" ]; then
   fi
 fi
 
+exec 1> >(${zenity} --progress --pulsate --no-cancel --title="SSH Key" --text="Fetching SSH Key from the server." --auto-close)
+
 # open ports in the firewall
-echo "${gladosProto}://${gladosIp}:${gladosPort}" >>/etc/lernstick-firewall/url_whitelist
+echo "^${gladosProto}://${gladosIp}" | sed 's/\./\\\./g'  >>/etc/lernstick-firewall/url_whitelist
 sed -i '$!N; /^\(.*\)\n\1$/!P; D' /etc/lernstick-firewall/url_whitelist
-service lernstick-firewall reload
+service lernstick-firewall restart
 iptables -I INPUT -p tcp --dport 22 -s ${gladosIp} -m comment --comment "searchExamServer" -j ACCEPT
 iptables -I OUTPUT -p tcp --dport ${gladosPort} -d ${gladosIp} -m comment --comment "searchExamServer" -j ACCEPT
-
-exec 1> >(${zenity} --progress --pulsate --no-cancel --title="SSH Key" --text="Fetching SSH Key from the server." --auto-close)
 
 # get the SSH key
 sshKey="$(${wget} ${wgetOptions} -qO- "${actionSSHKey}")"
