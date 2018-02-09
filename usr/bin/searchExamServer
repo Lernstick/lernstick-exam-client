@@ -254,6 +254,7 @@ fi
 
 sed -i '$!N; /^\(.*\)\n\1$/!P; D' /etc/lernstick-firewall/url_whitelist
 service lernstick-firewall restart
+[ "${VERSION_ID}" = "9" ] && service squid restart
 [ "${VERSION_ID}" = "9" ] && /etc/init.d/squid reload
 iptables -I INPUT -p tcp --dport 22 -s ${gladosIp} -m comment --comment "searchExamServer" -j ACCEPT
 iptables -I OUTPUT -p tcp --dport ${gladosPort} -d ${gladosIp} -m comment --comment "searchExamServer" -j ACCEPT
