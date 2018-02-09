@@ -182,7 +182,7 @@ else
 
     # retrieve exam servers in the net
     ( avahi-browse -rp --no-db-lookup _http._tcp & echo $! >&3 ) 3>/tmp/pid1 | \
-      awk -W interactive -F";" 'BEGIN{d=0;}
+      stdbuf -oL awk -W interactive -F";" 'BEGIN{d=0;}
         $1=="=" && $3=="IPv4" && $10~/Glados/{
           print $0 > "/tmp/avahi-orig";
           printf "%d\n%s\n%s\n%s\n%s\n%s\n%s\n", ++d, $4, $8, $7, $9, $8==443 ? "https" : "http", $2;
