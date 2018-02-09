@@ -57,7 +57,7 @@ function do_exit()
   iptables-save | grep -v "searchExamServer" | iptables-restore
 
   # cleanup firewall whitelist
-  if [ "${VERSION_ID}" = "9" ];
+  if [ "${VERSION_ID}" = "9" ]; then
     diff --unchanged-group-format="" <(echo "^${gladosProto}://${gladosIp}" | sed 's/\./\\\./g') /etc/lernstick-firewall/url_whitelist >/tmp/url_whitelist
   else
     diff --unchanged-group-format="" <(echo "^${gladosProto}://${gladosIp}") /etc/lernstick-firewall/url_whitelist >/tmp/url_whitelist
