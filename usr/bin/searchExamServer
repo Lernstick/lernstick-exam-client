@@ -14,6 +14,9 @@ timeout=10
 configFile="/etc/lernstick-exam-client.conf"
 pid=$$
 
+# source os-release
+. /etc/os-release
+
 wgetErrors=(
   "No problems occurred."
   "Generic error code."
@@ -54,7 +57,11 @@ function do_exit()
   iptables-save | grep -v "searchExamServer" | iptables-restore
 
   # cleanup firewall whitelist
-  diff --unchanged-group-format="" <(echo "^${gladosProto}://${gladosIp}" | sed 's/\./\\\./g') /etc/lernstick-firewall/url_whitelist >/tmp/url_whitelist
+  if [ "${VERSION_ID}" = "9" ];
+    diff --unchanged-group-format="" <(echo "^${gladosProto}://${gladosIp}" | sed 's/\./\\\./g') /etc/lernstick-firewall/url_whitelist >/tmp/url_whitelist
+  else
+    diff --unchanged-group-format="" <(echo "^${gladosProto}://${gladosIp}") /etc/lernstick-firewall/url_whitelist >/tmp/url_whitelist
+  fi
   cat /tmp/url_whitelist >/etc/lernstick-firewall/url_whitelist
 
   # unmount the filesystem
@@ -239,11 +246,20 @@ fi
 exec 1> >(${zenity} --progress --pulsate --no-cancel --title="SSH Key" --text="Fetching SSH Key from the server." --auto-close)
 
 # open ports in the firewall
-echo "^${gladosProto}://${gladosIp}" | sed 's/\./\\\./g'  >>/etc/lernstick-firewall/url_whitelist
+if [ "${VERSION_ID}" = "9" ]; then
+  echo "^${gladosProto}://${gladosIp}" | sed 's/\./\\\./g'  >>/etc/lernstick-firewall/url_whitelist
+else
+  echo "^${gladosProto}://${gladosIp}" >>/etc/lernstick-firewall/url_whitelist
+fi
+
 sed -i '$!N; /^\(.*\)\n\1$/!P; D' /etc/lernstick-firewall/url_whitelist
 service lernstick-firewall restart
+[ "${VERSION_ID}" = "9" ] && /etc/init.d/squid reload
 iptables -I INPUT -p tcp --dport 22 -s ${gladosIp} -m comment --comment "searchExamServer" -j ACCEPT
 iptables -I OUTPUT -p tcp --dport ${gladosPort} -d ${gladosIp} -m comment --comment "searchExamServer" -j ACCEPT
+
+# this sleep is needed, else wget would fail (network error, 4)
+sleep 1
 
 # get the SSH key
 sshKey="$(${wget} ${wgetOptions} -qO- "${actionSSHKey}")"
