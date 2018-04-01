@@ -68,6 +68,8 @@ function do_exit()
   umount /run/initramfs/newroot 2>/dev/null
   umount -l /run/initramfs/{base,exam} 2>/dev/null
 
+  [ "${VERSION_ID}" = "9" ] && pkill --signal 1 squid
+
   killtree $pid
   exit
 }
@@ -254,8 +256,7 @@ fi
 
 sed -i '$!N; /^\(.*\)\n\1$/!P; D' /etc/lernstick-firewall/url_whitelist
 service lernstick-firewall restart
-[ "${VERSION_ID}" = "9" ] && service squid restart
-[ "${VERSION_ID}" = "9" ] && /etc/init.d/squid reload
+[ "${VERSION_ID}" = "9" ] && pkill --signal 1 squid
 iptables -I INPUT -p tcp --dport 22 -s ${gladosIp} -m comment --comment "searchExamServer" -j ACCEPT
 iptables -I OUTPUT -p tcp --dport ${gladosPort} -d ${gladosIp} -m comment --comment "searchExamServer" -j ACCEPT
 
@@ -292,6 +293,9 @@ echo "${sshKey}" >>"/root/.ssh/authorized_keys"
     actionConfig="${actionConfig}"
     sshKey="${sshKey}"
 EOF
+
+# remount /run wothout noexec (Debian 9 changed this, /run/initramfs/shutdown will not be executed elsewhere)
+mount -n -o remount,exec /run
 
 url="${actionDownload//\{token\}/$token}"
 
