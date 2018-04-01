@@ -1,5 +1,5 @@
 [Desktop Entry]
-Categories=System;
+Categories=X-lernstick;
 Exec=/usr/bin/finishExam 
 Icon=finishExam
 GenericName=Hand in exam

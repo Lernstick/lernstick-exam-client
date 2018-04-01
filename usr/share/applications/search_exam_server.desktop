@@ -1,5 +1,5 @@
 [Desktop Entry]
-Categories=System;
+Categories=X-lernstick;
 Exec=/usr/bin/pkexec-searchExamServer
 Icon=searchExamServer
 GenericName=Search for exam server
