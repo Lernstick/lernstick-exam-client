@@ -8,6 +8,10 @@ function clientState()
 {
   echo "$1"
   ${wget} -qO- "${urlNotify//\{state\}/$1}" 2>&1 >/dev/null
+  if [ "$?" -ne "0" ]; then
+    sleep 5
+    ${wget} -qO- "${urlNotify//\{state\}/$1}" 2>&1 >/dev/null
+  fi
 }
 
 # when the /booted file already exists, this is a network reconnect 
