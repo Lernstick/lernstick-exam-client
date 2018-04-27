@@ -1,0 +1,5 @@
+debian/debhelper-build-stamp
+debian/files
+debian/lernstick-exam-client.debhelper.log
+debian/lernstick-exam-client.substvars
+debian/lernstick-exam-client/
