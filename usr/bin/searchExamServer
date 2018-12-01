@@ -140,6 +140,7 @@ iptables -I INPUT -p udp --dport 5353 -d 224.0.0.251 -m comment --comment "searc
 iptables -I OUTPUT -p udp --dport 5353 -d 224.0.0.251 -m comment --comment "searchExamServer" -j ACCEPT
 
 export DISPLAY=:0
+export $(strings /proc/*/environ | grep -P "^XAUTHORITY=" | head -1)
 
 # create the directory structure and cleanup
 mkdir -p "/run/initramfs/"{newroot,base,exam,tmpfs,squashfs,backup/home/user}
