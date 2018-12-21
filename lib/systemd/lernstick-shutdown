@@ -79,7 +79,7 @@ if [ -f "/restore" ]; then
 
 #  mount -t tmpfs tmpfs /tmpfs
 #  mount -t aufs -o br=/tmpfs=rw:/backup=ro:/exam=ro:/base=ro none "/newroot"
-  mount -t aufs -o br=/backup=rw:/exam=ro:/base=ro none "/newroot"
+  [ -e "/mount" ] && sh "/mount" || mount -t aufs -o br=/backup=rw:/exam=ro:/base=ro none "/newroot"
   cp /info /newroot/info
 
   # mount the overlay inside the filesystem
