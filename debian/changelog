@@ -1,3 +1,10 @@
+lernstick-exam-client (1.0.5-1) lernstick-9; urgency=low
+
+  * Support for overlayFs
+  * Firefox is not started as root anymore
+
+ -- Roman Gruber <roman.gruber@bwzofingen.ch>  Wed, 20 Mar 2019 18:57:34 +0100
+
 lernstick-exam-client (1.0.3-1) lernstick-9; urgency=low
 
   * Initial release
