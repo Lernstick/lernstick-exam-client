@@ -16,7 +16,7 @@ set -e
 
 case "$1" in
     install|upgrade)
-        dpkg-divert --add --package lernstick-exam-client --rename --divert /lib/systemd/lernstick-shutdown.diverted /lib/systemd/lernstick-shutdown
+        #dpkg-divert --add --package lernstick-exam-client --rename --divert /lib/systemd/lernstick-shutdown.diverted /lib/systemd/lernstick-shutdown
     ;;
 
     abort-upgrade)
