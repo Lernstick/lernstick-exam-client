@@ -15,7 +15,7 @@
 
 
 %:
-	dh $@ 
+	dh $@ --with=config-package
 
 
 # dh_make generated override targets
