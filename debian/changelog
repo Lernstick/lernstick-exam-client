@@ -1,3 +1,9 @@
+lernstick-exam-client (1.0.6-1) lernstick-9; urgency=low
+
+  * Fixed update
+
+ -- Roman Gruber <roman.gruber@bwzofingen.ch>  Fri, 22 Mar 2019 21:22:20 +0100
+
 lernstick-exam-client (1.0.5-1) lernstick-9; urgency=low
 
   * Support for overlayFs
