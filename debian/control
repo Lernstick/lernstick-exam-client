@@ -2,7 +2,7 @@ Source: lernstick-exam-client
 Section: net
 Priority: optional
 Maintainer: Roman Gruber <roman.gruber@bwzofingen.ch>
-Build-Depends: debhelper (>=9), config-package-dev
+Build-Depends: debhelper (>=9), config-package-dev, gettext
 Standards-Version: 3.9.6
 Homepage: <insert the upstream URL, if relevant>
 #Vcs-Git: git://anonscm.debian.org/collab-maint/lernstick-exam-client.git

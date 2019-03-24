@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# gettext support
+. gettext.sh
+export TEXTDOMAIN=lernstick-exam-client
+
 DEBUG=true
 wget="/usr/bin/wget"
 wgetOptions="--dns-timeout=30"
@@ -18,15 +22,15 @@ pid=$$
 . /etc/os-release
 
 wgetErrors=(
-  "No problems occurred."
-  "Generic error code."
-  "Parse error—for instance, when parsing command-line options, the ‘.wgetrc’ or ‘.netrc’..."
-  "File I/O error."
-  "Network failure."
-  "SSL verification failure."
-  "Username/password authentication failure."
-  "Protocol errors."
-  "Server issued an error response."
+  "$(gettext "No problems occurred.")"
+  "$(gettext "Generic error code.")"
+  "$(gettext "Parse error---for instance, when parsing command-line options, the '.wgetrc' or '.netrc'...")"
+  "$(gettext "File I/O error.")"
+  "$(gettext "Network failure.")"
+  "$(gettext "SSL verification failure.")"
+  "$(gettext "Username/password authentication failure.")"
+  "$(gettext "Protocol errors.")"
+  "$(gettext "Server issued an error response.")"
 )
 
 # transmit state to server
@@ -101,8 +105,9 @@ function config_value()
     config="$(${wget} ${wgetOptions} -qO- "${urlConfig}")"
     retval=$?
     if [ ${retval} -ne 0 ]; then
-      >&2 echo "wget failed while fetching the system config. Error: ${wgetErrors[$retval]} (${retval})."
-      ${zenity} --error --title "Wget error" --text "wget failed while fetching the system config. Error: ${wgetErrors[$retval]} (${retval})."
+      WGET_ERROR="${wgetErrors[$retval]} (${retval})"
+      >&2 echo "wget failed while fetching the system config. Error: ${WGET_ERROR}."
+      ${zenity} --error --title "$(gettext "Wget error")" --text "$(eval_gettext "wget failed while fetching the system config. Error: \${WGET_ERROR}.")"
       do_exit
     fi
   fi
@@ -155,7 +160,7 @@ rm -f /tmp/zenity1 2>/dev/null
 if [ -r "${configFile}" ]; then
   fixed="true"
   
-  exec 1> >(${zenity} --progress --pulsate --no-cancel --title="Search" --text="Searching for exam server." --auto-close)
+  exec 1> >(${zenity} --progress --pulsate --no-cancel --title="$(gettext "Search")" --text="$(gettext "Searching for exam server.")" --auto-close)
 
   $DEBUG && >&2 echo "Configfile found, using ${configFile}."
   . "${configFile}"
@@ -170,15 +175,15 @@ else
 
     # display the list
     exec 1> >(${zenity} --list \
-      --title="Searching for exam server." \
-      --text "The following list of exam servers was found in the network. Please select the one you want to use." \
+      --title="$(gettext "Searching for exam server.")" \
+      --text "$(gettext "The following list of exam servers was found in the network. Please select the one you want to use.")" \
       --column "#" \
-      --column "Name" \
-      --column "IP" \
-      --column "Host" \
-      --column "Port" \
-      --column "Protocol" \
-      --column "Interface" \
+      --column "$(gettext "Name")" \
+      --column "$(gettext "IP")" \
+      --column "$(gettext "Host")" \
+      --column "$(gettext "Port")" \
+      --column "$(gettext "Protocol")" \
+      --column "$(gettext "Interface")" \
       --hide-column=1 \
       --width=700 \
       --height=220 >/tmp/zenity1 || do_exit; kill $(cat /tmp/pid1) 2>/dev/null)
@@ -217,17 +222,19 @@ fi
 
 if [ -z "$gladosIp" ] || [ -z "$gladosPort" ]; then
   $DEBUG && >&2 echo "Glados host not found."
-  zenity --error --title="Error" --text="Glados host not found."
+  zenity --error --title="$(gettext "Error")" --text="$(gettext "Glados host not found.")"
   do_exit
 fi
 
 # parse the action URLs
 for action in Download Finish Notify SSHKey Md5 Config; do
+  # FIXME: xgettext crashes on the following line
   if [[ $AVAHI =~ action${action}=\'([^\']+)\' ]]; then
     declare action${action}="${gladosProto}://${gladosIp}:${gladosPort}/${BASH_REMATCH[1]}"
   else
-    $DEBUG && >&2 echo "action${action} not found in txt field."
-    zenity --error --title="Error" --text="action${action} not found in txt field."
+    ERROR_MESSAGE="$(gettext "action\${action} not found in txt field.")"
+    $DEBUG && >&2 echo "${ERROR_MESSAGE}"
+    zenity --error --title="$(gettext "Error")" --text="${ERROR_MESSAGE}"
     do_exit
   fi
 done
@@ -241,12 +248,14 @@ if [ "$fixed" = "true" ]; then
   exec 1>&-; exec 1>&0
 
   # Ask the user to proceed
-  if ! ${zenity} --question --title="Continue" --text="An exam server (${gladosDesc}) was found in the network (${eth}). Switch to exam mode?"; then
+  if ! ${zenity} --question --title="$(gettext "Continue")" --text="$(eval_gettext "An exam server (\${gladosDesc}) was found in the network (\${eth}). Switch to exam mode?")"; then
     do_exit
   fi
 fi
 
-exec 1> >(${zenity} --progress --pulsate --no-cancel --title="SSH Key" --text="Fetching SSH Key from the server." --auto-close)
+ZENITY_TITLE="$(gettext "SSH Key")"
+ZENITY_TEXT="$(gettext "Fetching SSH Key from the server.")"
+exec 1> >(${zenity} --progress --pulsate --no-cancel --title="${ZENITY_TITLE}" --text="${ZENITY_TEXT}" --auto-close)
 
 # open ports in the firewall
 if [ "${VERSION_ID}" = "9" ]; then
@@ -270,7 +279,7 @@ sshKey="$(${wget} ${wgetOptions} -qO- "${actionSSHKey}")"
 retval=$?
 if [ ${retval} -ne 0 ]; then
   >&2 echo "wget failed while fetching the SSH key. Error: ${wgetErrors[$retval]} (${retval})."
-  ${zenity} --error --title "Wget error" --text "wget failed while fetching the SSH key. Error: ${wgetErrors[$retval]} (${retval})."
+  ${zenity} --error --title "$(gettext "Wget error")" --text "$(eval_gettext "wget failed while fetching the SSH key. Error: \${wgetErrors[\$retval]} (\${retval}).")"
   do_exit
 fi
 

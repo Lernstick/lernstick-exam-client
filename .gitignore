@@ -6,3 +6,4 @@ debian/lernstick-exam-client.debhelper.log
 debian/lernstick-exam-client.postinst.debhelper
 debian/lernstick-exam-client.prerm.debhelper
 debian/lernstick-exam-client.substvars
+usr/share/locale/
