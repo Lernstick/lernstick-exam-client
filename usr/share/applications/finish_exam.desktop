@@ -1,7 +1,7 @@
 [Desktop Entry]
 Categories=X-lernstick;
 Exec=/usr/bin/finishExam 
-Icon=finishExam
+Icon=/usr/share/icons/gnome/256x256/actions/system-log-out.png
 GenericName=Hand in exam
 GenericName[de]=Prüfung abgeben
 Name=Hand in exam

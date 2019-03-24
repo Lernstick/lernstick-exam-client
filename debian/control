@@ -10,7 +10,7 @@ Homepage: <insert the upstream URL, if relevant>
 
 Package: lernstick-exam-client
 Architecture: all
-Depends: wget, python (>= 2.7), zenity, coreutils, iptables
+Depends: wget, python (>= 2.7), zenity, coreutils, iptables, gnome-icon-theme, oxygen-icon-theme
 Provides: ${diverted-files}
 Conflicts: ${diverted-files}
 Description: Client for the Lernstick exam server GLaDOS
