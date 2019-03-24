@@ -1,15 +1,12 @@
 lernstick-exam-client for Debian
 -------------------------------
 
-Write a changelog entry. Date format:
+Update changelog:
 
- LC_ALL=c date -R
+ gbp dch --auto --id-length=6
 
-Maybe adjust year in debian/copyright.
+Build the package with:
 
-Build the package with
-
- debian/rules clean
- debuild -b -uc -us
+ dpkg-buildpackage -sa
 
  -- Roman Gruber <roman.gruber@bwzofingen.ch>  Tue, 27 Jun 2017 11:31:47 +0200
