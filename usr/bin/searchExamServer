@@ -6,7 +6,7 @@ export TEXTDOMAIN=lernstick-exam-client
 
 DEBUG=true
 wget="/usr/bin/wget"
-wgetOptions="--dns-timeout=30"
+wgetOptions="--timeout=10 --tries=3"
 zenity="/usr/bin/zenity"
 python="/usr/bin/python"
 md5sum="/usr/bin/md5sum"
@@ -240,7 +240,7 @@ for action in Download Finish Notify SSHKey Md5 Config; do
 done
 
 $DEBUG && >&2 echo "Exam server found."
-echo "#Exam server found."
+echo "#$(gettext "Exam server found.")"
 sleep 1
 
 if [ "$fixed" = "true" ]; then
@@ -278,8 +278,9 @@ sshKey="$(${wget} ${wgetOptions} -qO- "${actionSSHKey}")"
 
 retval=$?
 if [ ${retval} -ne 0 ]; then
-  >&2 echo "wget failed while fetching the SSH key. Error: ${wgetErrors[$retval]} (${retval})."
-  ${zenity} --error --title "$(gettext "Wget error")" --text "$(eval_gettext "wget failed while fetching the SSH key. Error: \${wgetErrors[\$retval]} (\${retval}).")"
+  WGET_ERROR="${wgetErrors[$retval]} (${retval})"
+  >&2 echo "wget failed while fetching the SSH key. Error: ${WGET_ERROR}."
+  ${zenity} --error --title "$(gettext "Wget error")" --text "$(eval_gettext "wget failed while fetching the SSH key. Error: \${WGET_ERROR}.")"
   do_exit
 fi
 

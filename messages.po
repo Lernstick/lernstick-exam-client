@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-04-09 12:43+0200\n"
+"POT-Creation-Date: 2019-04-09 13:18+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -55,7 +55,7 @@ msgstr ""
 msgid "Server issued an error response."
 msgstr ""
 
-#: usr/bin/searchExamServer:110 usr/bin/searchExamServer:282
+#: usr/bin/searchExamServer:110 usr/bin/searchExamServer:283
 msgid "Wget error"
 msgstr ""
 
@@ -115,6 +115,10 @@ msgstr ""
 msgid "action${action} not found in txt field."
 msgstr ""
 
+#: usr/bin/searchExamServer:243
+msgid "Exam server found."
+msgstr ""
+
 #: usr/bin/searchExamServer:251
 msgid "Continue"
 msgstr ""
@@ -134,8 +138,7 @@ msgstr ""
 msgid "Fetching SSH Key from the server."
 msgstr ""
 
-#: usr/bin/searchExamServer:282
-msgid ""
-"wget failed while fetching the SSH key. Error: ${wgetErrors[$retval]} "
-"(${retval})."
+#: usr/bin/searchExamServer:283
+#, sh-format
+msgid "wget failed while fetching the SSH key. Error: ${WGET_ERROR}."
 msgstr ""

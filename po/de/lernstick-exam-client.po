@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: 0.1\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-04-09 12:34+0200\n"
+"POT-Creation-Date: 2019-04-09 13:16+0200\n"
 "PO-Revision-Date: 2019-03-24 12:36+0100\n"
 "Last-Translator: Ronny Standtke <ronny.standtke@gmx.net>\n"
 "Language-Team: GERMAN <DE@li.org>\n"
@@ -56,7 +56,7 @@ msgstr "Protokollfehler."
 msgid "Server issued an error response."
 msgstr "Der Server meldete einen Fehler zurück."
 
-#: usr/bin/searchExamServer:110 usr/bin/searchExamServer:282
+#: usr/bin/searchExamServer:110 usr/bin/searchExamServer:283
 msgid "Wget error"
 msgstr "Wget-Fehler"
 
@@ -73,7 +73,7 @@ msgstr "Suche"
 
 #: usr/bin/searchExamServer:163 usr/bin/searchExamServer:178
 msgid "Searching for exam server."
-msgstr "Suche nach Prüfungsservern"
+msgstr "Suche nach Prüfungsservern."
 
 #: usr/bin/searchExamServer:179
 msgid ""
@@ -120,6 +120,10 @@ msgstr "Glados-Host nicht gefunden."
 msgid "action${action} not found in txt field."
 msgstr "action${action} nicht gefunden im txt Feld"
 
+#: usr/bin/searchExamServer:243
+msgid "Exam server found."
+msgstr "Prüfungsserver gefunden."
+
 #: usr/bin/searchExamServer:251
 msgid "Continue"
 msgstr "Weiter"
@@ -130,7 +134,7 @@ msgid ""
 "An exam server (${gladosDesc}) was found in the network (${eth}). Switch to "
 "exam mode?"
 msgstr ""
-"Ein Prüfungsserver (${gladosDesc}) wurde in Netzwerk (${eth}) gefunden."
+"Ein Prüfungsserver (${gladosDesc}) wurde in Netzwerk (${eth}) gefunden. "
 "Welchseln in Prüfungsmodus?"
 
 #: usr/bin/searchExamServer:256
@@ -138,15 +142,12 @@ msgid "SSH Key"
 msgstr "SSH Key"
 
 #: usr/bin/searchExamServer:257
-#, fuzzy
 msgid "Fetching SSH Key from the server."
-msgstr "Rufe SSh Key vom Server ab."
+msgstr "Rufe SSH Key vom Server ab."
 
-#: usr/bin/searchExamServer:282
-#, fuzzy
-msgid ""
-"wget failed while fetching the SSH key. Error: ${wgetErrors[$retval]} "
-"(${retval})."
+#: usr/bin/searchExamServer:283
+#, sh-format
+msgid "wget failed while fetching the SSH key. Error: ${WGET_ERROR}."
 msgstr ""
-"wget ist bei der Abholung der Systemkonfiguration fehlgeschlagen. Fehler: "
+"wget ist beim Abrufen des SSH Keys fehlgeschlagen. Fehler: "
 "${WGET_ERROR}."

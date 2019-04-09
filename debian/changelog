@@ -1,3 +1,14 @@
+lernstick-exam-client (1.0.8) UNRELEASED; urgency=medium
+
+  [ Ronny Standtke ]
+  * [59700f] updated Debian readme
+  * [54cdc6] towards working gettext integration
+
+  [ root ]
+  * [f96dd6] translations completed
+
+ -- root <root@localhost.localdomain>  Tue, 09 Apr 2019 12:49:52 +0200
+
 lernstick-exam-client (1.0.7) lernstick-9; urgency=medium
 
   * [d0a9fb] added icons to desktop files
