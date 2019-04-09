@@ -228,9 +228,9 @@ fi
 
 # parse the action URLs
 for action in Download Finish Notify SSHKey Md5 Config; do
-  # FIXME: xgettext crashes on the following line
-  if [[ $AVAHI =~ action${action}=\'([^\']+)\' ]]; then
-    declare action${action}="${gladosProto}://${gladosIp}:${gladosPort}/${BASH_REMATCH[1]}"
+  if echo "$AVAHI" | grep -qP "action${action}=\'([^\']+)\'"; then
+    match="$(echo "$AVAHI" | sed -r "s/.*action${action}='([^']+)'.*/\1/")"
+    declare action${action}="${gladosProto}://${gladosIp}:${gladosPort}/${match}"
   else
     ERROR_MESSAGE="$(gettext "action\${action} not found in txt field.")"
     $DEBUG && >&2 echo "${ERROR_MESSAGE}"
@@ -304,7 +304,7 @@ echo "${sshKey}" >>"/root/.ssh/authorized_keys"
     sshKey="${sshKey}"
 EOF
 
-# remount /run wothout noexec (Debian 9 changed this, /run/initramfs/shutdown will not be executed elsewhere)
+# remount /run without noexec (Debian 9 changed this, /run/initramfs/shutdown will not be executed elsewhere)
 mount -n -o remount,exec /run
 
 url="${actionDownload//\{token\}/$token}"

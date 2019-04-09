@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-03-24 15:20+0100\n"
+"POT-Creation-Date: 2019-04-09 12:43+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -55,7 +55,7 @@ msgstr ""
 msgid "Server issued an error response."
 msgstr ""
 
-#: usr/bin/searchExamServer:110
+#: usr/bin/searchExamServer:110 usr/bin/searchExamServer:282
 msgid "Wget error"
 msgstr ""
 
@@ -102,7 +102,7 @@ msgstr ""
 msgid "Interface"
 msgstr ""
 
-#: usr/bin/searchExamServer:225
+#: usr/bin/searchExamServer:225 usr/bin/searchExamServer:237
 msgid "Error"
 msgstr ""
 
@@ -110,7 +110,32 @@ msgstr ""
 msgid "Glados host not found."
 msgstr ""
 
-#: usr/bin/searchExamServer:231
+#: usr/bin/searchExamServer:235
 #, sh-format
-msgid "XXXaction${action} not found in txt field."
+msgid "action${action} not found in txt field."
+msgstr ""
+
+#: usr/bin/searchExamServer:251
+msgid "Continue"
+msgstr ""
+
+#: usr/bin/searchExamServer:251
+#, sh-format
+msgid ""
+"An exam server (${gladosDesc}) was found in the network (${eth}). Switch to "
+"exam mode?"
+msgstr ""
+
+#: usr/bin/searchExamServer:256
+msgid "SSH Key"
+msgstr ""
+
+#: usr/bin/searchExamServer:257
+msgid "Fetching SSH Key from the server."
+msgstr ""
+
+#: usr/bin/searchExamServer:282
+msgid ""
+"wget failed while fetching the SSH key. Error: ${wgetErrors[$retval]} "
+"(${retval})."
 msgstr ""
