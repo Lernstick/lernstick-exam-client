@@ -1,13 +1,14 @@
-lernstick-exam-client (1.0.8) UNRELEASED; urgency=medium
+lernstick-exam-client (1.0.8) lernstick-9; urgency=medium
 
   [ Ronny Standtke ]
   * [59700f] updated Debian readme
   * [54cdc6] towards working gettext integration
 
-  [ root ]
+  [ chaoos ]
   * [f96dd6] translations completed
+  * [583f70] fixed a buf where the iptables are not restored, when aborting the server search
 
- -- root <root@localhost.localdomain>  Tue, 09 Apr 2019 12:49:52 +0200
+ -- Roman Gruber <roman.gruber@inf.unibe.ch>  Thu, 11 Apr 2019 16:26:21 +0200
 
 lernstick-exam-client (1.0.7) lernstick-9; urgency=medium
 
