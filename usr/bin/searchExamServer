@@ -337,7 +337,7 @@ cat <<EOF >"/run/initramfs/init.html"
 EOF
 
 # firefox should not be run as root in a regular users session, and it's not supported anymore
-sudo -u user /usr/bin/firefox -createprofile "searchExamServer /tmp/searchExamServer"
+sudo -u user /usr/bin/firefox -createprofile "searchExamServer /tmp/searchExamServer" -no-remote
 
 exec 1>&-; exec 1>&0
 
