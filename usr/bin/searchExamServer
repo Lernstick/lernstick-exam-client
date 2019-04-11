@@ -240,7 +240,7 @@ fi
 # parse the action URLs
 for action in Download Finish Notify SSHKey Md5 Config; do
   if echo "$AVAHI" | grep -qP "action${action}=\'([^\']+)\'"; then
-    match="$(echo "$AVAHI" | sed -r "s/.*action${action}='([^']+)'.*/\1/")"
+    match="$(echo "$AVAHI" | sed -rn "/action${action}='([^']+)'/s/.*action${action}='([^']+)'.*/\1/p")"
     declare action${action}="${gladosProto}://${gladosIp}:${gladosPort}/${match}"
   else
     ERROR_MESSAGE="$(gettext "action\${action} not found in txt field.")"
