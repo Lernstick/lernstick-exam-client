@@ -55,10 +55,10 @@ function killtree()
 
 function do_exit()
 {
-  $DEBUG && >&2 echo "exiting cleanly"
+  $DEBUG && >&2 echo "exiting cleanly (reason: ${1})"
 
   # revert all changes to iptables
-  iptables-save | grep -v "searchExamServer" | iptables-restore
+  iptables-save | grep -v "searchExamServer" | iptables-restore -w
 
   # cleanup firewall whitelist
   if [ "${VERSION_ID}" = "9" ]; then
@@ -72,9 +72,17 @@ function do_exit()
   umount /run/initramfs/newroot 2>/dev/null
   umount -l /run/initramfs/{base,exam} 2>/dev/null
 
-  [ "${VERSION_ID}" = "9" ] && pkill --signal 1 squid
+  if [ "${VERSION_ID}" = "9" ]; then
+    #pkill --signal 1 squid # causes squid to flush the iptables
+    squid -k reconfigure # iptables stays
+  fi
 
   killtree $pid
+
+  # remove the trap
+  trap - EXIT
+  
+  # and exit the script
   exit
 }
 trap do_exit EXIT
@@ -108,7 +116,7 @@ function config_value()
       WGET_ERROR="${wgetErrors[$retval]} (${retval})"
       >&2 echo "wget failed while fetching the system config. Error: ${WGET_ERROR}."
       ${zenity} --error --title "$(gettext "Wget error")" --text "$(eval_gettext "wget failed while fetching the system config. Error: \${WGET_ERROR}.")"
-      do_exit
+      do_exit "wget failed while fetching the system config."
     fi
   fi
 
@@ -186,7 +194,7 @@ else
       --column "$(gettext "Interface")" \
       --hide-column=1 \
       --width=700 \
-      --height=220 >/tmp/zenity1 || do_exit; kill $(cat /tmp/pid1) 2>/dev/null)
+      --height=220 >/tmp/zenity1 || echo "-1" >/tmp/zenity1; kill $(cat /tmp/pid1) 2>/dev/null )
 
     # retrieve exam servers in the net
     ( avahi-browse -rp --no-db-lookup _http._tcp & echo $! >&3 ) 3>/tmp/pid1 | \
@@ -203,6 +211,9 @@ else
 
   # get the choice
   num=$(cat /tmp/zenity1)
+
+  # if the user pressed "abort", then exit
+  [ "$num" = "-1" ] && do_exit "User aborted before server selection."
   AVAHI="$(sed "${num}q;d" /tmp/avahi-orig)"
 
   # parse the output
@@ -223,7 +234,7 @@ fi
 if [ -z "$gladosIp" ] || [ -z "$gladosPort" ]; then
   $DEBUG && >&2 echo "Glados host not found."
   zenity --error --title="$(gettext "Error")" --text="$(gettext "Glados host not found.")"
-  do_exit
+  do_exit "Glados host not found."
 fi
 
 # parse the action URLs
@@ -235,7 +246,7 @@ for action in Download Finish Notify SSHKey Md5 Config; do
     ERROR_MESSAGE="$(gettext "action\${action} not found in txt field.")"
     $DEBUG && >&2 echo "${ERROR_MESSAGE}"
     zenity --error --title="$(gettext "Error")" --text="${ERROR_MESSAGE}"
-    do_exit
+    do_exit "action not found in txt field."
   fi
 done
 
@@ -249,7 +260,7 @@ if [ "$fixed" = "true" ]; then
 
   # Ask the user to proceed
   if ! ${zenity} --question --title="$(gettext "Continue")" --text="$(eval_gettext "An exam server (\${gladosDesc}) was found in the network (\${eth}). Switch to exam mode?")"; then
-    do_exit
+    do_exit "User aborted before switching to exam mode."
   fi
 fi
 
@@ -281,7 +292,7 @@ if [ ${retval} -ne 0 ]; then
   WGET_ERROR="${wgetErrors[$retval]} (${retval})"
   >&2 echo "wget failed while fetching the SSH key. Error: ${WGET_ERROR}."
   ${zenity} --error --title "$(gettext "Wget error")" --text "$(eval_gettext "wget failed while fetching the SSH key. Error: \${WGET_ERROR}.")"
-  do_exit
+  do_exit "wget failed while fetching the SSH key."
 fi
 
 # create environment
