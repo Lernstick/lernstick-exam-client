@@ -44,7 +44,7 @@ fi
 # if the flag is set, start the search script in the background
 if grep -q "SearchExamServer=true" ${CONFIG_FILE}
 then
-  exec /usr/bin/searchExamServer $1 $2 &
+  exec /usr/bin/pkexec-searchExamServer $1 $2 &
 fi
 
 exit
