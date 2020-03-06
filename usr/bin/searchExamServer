@@ -304,7 +304,7 @@ else
 fi
 
 sed -i '$!N; /^\(.*\)\n\1$/!P; D' /etc/lernstick-firewall/url_whitelist
-echo "service lernstick-firewall restart"
+service lernstick-firewall restart
 isdeb9ornewer && squid -k reconfigure
 
 iptables -I INPUT -p tcp --dport 22 -s ${gladosIp} -m comment --comment "searchExamServer" -j ACCEPT
