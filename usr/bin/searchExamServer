@@ -33,6 +33,17 @@ wgetErrors=(
   "$(gettext "Server issued an error response.")"
 )
 
+# determines where we have debian 9 or newer
+function isdeb9ornewer()
+{
+  if [ "$(echo "${VERSION_ID}"| egrep -q "^[0-9]+$")" != "" ] && [ ${VERSION_ID} -le 8 ]; then
+    false
+  else
+    true
+  fi
+
+}
+
 # transmit state to server
 function clientState()
 {
@@ -61,7 +72,7 @@ function do_exit()
   iptables-save | grep -v "searchExamServer" | iptables-restore -w
 
   # cleanup firewall whitelist
-  if [ "${VERSION_ID}" = "9" ]; then
+  if isdeb9ornewer; then
     diff --unchanged-group-format="" <(echo "^${gladosProto}://${gladosIp}" | sed 's/\./\\\./g') /etc/lernstick-firewall/url_whitelist >/tmp/url_whitelist
   else
     diff --unchanged-group-format="" <(echo "^${gladosProto}://${gladosIp}") /etc/lernstick-firewall/url_whitelist >/tmp/url_whitelist
@@ -72,10 +83,26 @@ function do_exit()
   umount /run/initramfs/newroot 2>/dev/null
   umount -l /run/initramfs/{base,exam} 2>/dev/null
 
-  if [ "${VERSION_ID}" = "9" ]; then
+  if isdeb9ornewer; then
     #pkill --signal 1 squid # causes squid to flush the iptables
-    squid -k reconfigure # iptables stays
+    squid -k reconfigure >/dev/null 2&>1; # iptables stays
   fi
+
+  # remove firefox profile.ini entry for the profile searchExamServer
+  if [ -e /home/user/.mozilla/firefox/profiles.ini ]; then
+    awk 'BEGIN { STATE=1; C=0; } 
+      STATE==3{ S="" }
+      /\[[Pp]rofile[0-9]+\]/ {STATE=2; C=0; if(S!=""){print S "(new profile)"}; S="";}
+      /\[/ && C>0 { STATE=1; if(S!="") {print S "(new Section)"};}
+      /[Pp]ath *= *.tmp.searchExamServer/ && STATE==2 { STATE=3; S="";}
+      /[Pp]ath/ && STATE==2 { print S;STATE=1;S=""; }
+      STATE==2 { S=S "\n" $0; }
+      STATE==1 { print; }
+      // {C=C+1;}
+      END { print S;} ' </home/user/.mozilla/firefox/profiles.ini >/home/user/.mozilla/firefox/profiles.ini.new && mv /home/user/.mozilla/firefox/profiles.ini.new /home/user/.mozilla/firefox/profiles.ini
+  fi
+
+  [ -e /tmp/searchExamServer ] && rm -r /tmp/searchExamServer
 
   killtree $pid
 
@@ -158,7 +185,6 @@ export $(strings /proc/*/environ | grep -P "^XAUTHORITY=" | head -1)
 # create the directory structure and cleanup
 mkdir -p "/run/initramfs/"{newroot,base,exam,tmpfs,squashfs,backup/home/user}
 chown user:user "/run/initramfs/backup/home/user"
-#>"${examSquashfs}"
 rm -f "${retoreStateFile}" 2>/dev/null
 rm -f /tmp/zenity1 2>/dev/null
 
@@ -269,15 +295,17 @@ ZENITY_TEXT="$(gettext "Fetching SSH Key from the server.")"
 exec 1> >(${zenity} --progress --pulsate --no-cancel --title="${ZENITY_TITLE}" --text="${ZENITY_TEXT}" --auto-close)
 
 # open ports in the firewall
-if [ "${VERSION_ID}" = "9" ]; then
+if isdeb9ornewer; then
+  echo "DEB9"
   echo "^${gladosProto}://${gladosIp}" | sed 's/\./\\\./g'  >>/etc/lernstick-firewall/url_whitelist
 else
+  echo "NON DEB9"
   echo "^${gladosProto}://${gladosIp}" >>/etc/lernstick-firewall/url_whitelist
 fi
 
 sed -i '$!N; /^\(.*\)\n\1$/!P; D' /etc/lernstick-firewall/url_whitelist
-service lernstick-firewall restart
-[ "${VERSION_ID}" = "9" ] && squid -k reconfigure
+echo "service lernstick-firewall restart"
+isdeb9ornewer && squid -k reconfigure
 
 iptables -I INPUT -p tcp --dport 22 -s ${gladosIp} -m comment --comment "searchExamServer" -j ACCEPT
 iptables -I OUTPUT -p tcp --dport ${gladosPort} -d ${gladosIp} -m comment --comment "searchExamServer" -j ACCEPT
@@ -336,10 +364,37 @@ cat <<EOF >"/run/initramfs/init.html"
 </html>
 EOF
 
+# remove the profile if it already exists
+[ -e /tmp/searchExamServer ] && rm -r /tmp/searchExamServer
+
 # firefox should not be run as root in a regular users session, and it's not supported anymore
+# This won't even create the profile appropriately
 sudo -u user /usr/bin/firefox -createprofile "searchExamServer /tmp/searchExamServer" -no-remote
 
+# solution adapted from https://superuser.com/questions/977912/firefox-hide-everything-except-content-area-of-the-browser/1269912#1269912
+sudo -u user mkdir -p /tmp/searchExamServer/chrome/
+(
+  cat - <<EOF
+/*
+ * set default namespace to XUL
+ */
+@namespace url("http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul");
+ 
+/*
+ * Hide tab bar, navigation bar and scrollbars
+ * !important may be added to force override, but not necessary
+ * #content is not necessary to hide scroll bars
+ */
+#toolbar-context-menu {display: none !important;}
+#TabsToolbar {visibility: collapse;}
+#navigator-toolbox {visibility: collapse;}
+browser {margin-right: -14px; margin-bottom: -14px;}
+EOF
+) | sudo -u user tee /tmp/searchExamServer/chrome/userChrome.css >/dev/null
+ 
 exec 1>&-; exec 1>&0
-
-sudo -u user /usr/bin/firefox -P "searchExamServer" -width 800 -height 310 -chrome "/run/initramfs/init.html"
-
+ 
+# firefox can only be called with -profile "path" here, because the profile might not be
+# created using -createprofile before, therefore -P "profilename" won't work anymore
+sudo -u user /usr/bin/firefox -no-remote -profile "/tmp/searchExamServer" -width 800 -height 310 "/run/initramfs/init.html"
+[ -e /tmp/searchExamServer ] && rm -r /tmp/searchExamServer
