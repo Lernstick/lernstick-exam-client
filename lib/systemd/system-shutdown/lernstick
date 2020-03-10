@@ -16,38 +16,9 @@ for d in etc bin sbin proc ; do
 done
 
 # copy busybox and dependencies to /run/initramfs
+# remove this line until the bug is fixed
+# see https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=953563
 #. /usr/share/initramfs-tools/hooks/zz-busybox
-#. /root/zz-busybox
-# Bug is filed: https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=953563
-set -e
-
-BB_BIN=/bin/busybox
-
-[ n = "$BUSYBOX" ] && exit 0
-
-[ -r /usr/share/initramfs-tools/hook-functions ] || exit 0
-. /usr/share/initramfs-tools/hook-functions
-
-if [ -f $DESTDIR/bin/sh ] && cmp -s $DESTDIR/bin/sh $BB_BIN ; then
-  # initramfs copies busybox into /bin/sh, undo this
-  rm -f $DESTDIR/bin/sh
-fi
-rm -f $DESTDIR/bin/busybox      # for compatibility with old initramfs
-copy_exec $BB_BIN /bin/busybox
-ln "$DESTDIR/usr/bin/busybox" "$DESTDIR/bin/busybox"
-
-for alias in $($BB_BIN --list-long); do
-  alias="${alias#/}"
-  case "$alias" in
-    # strip leading /usr, we don't use it
-    usr/*) alias="${alias#usr/}" ;;
-    */*) ;;
-    *) alias="bin/$alias" ;;  # make it into /bin
-  esac
-
-  [ -e "$DESTDIR/$alias" ] || \
-    ln "$DESTDIR/bin/busybox" "$DESTDIR/$alias"
-done
 
 # copy plymouth
 . /usr/share/initramfs-tools/hooks/plymouth
