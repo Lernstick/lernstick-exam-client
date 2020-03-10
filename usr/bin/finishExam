@@ -24,11 +24,11 @@ else
   exit
 fi
 
-if ! ${zenity} --question --title="Finish Exam" --text="Are you sure you want to finish your exam? If you click yes, you will not be able to continue your exam!"; then
+if ! ${zenity} --width=300 --question --title="Finish Exam" --text="Are you sure you want to finish your exam? If you click yes, you will not be able to continue your exam!"; then
   exit
 fi
 
-exec 1> >(${zenity} --progress --pulsate --no-cancel --title="Finishing exam" --text="Please wait while processing your request." --auto-close)
+exec 1> >(${zenity} --width=300 --progress --pulsate --no-cancel --title="Finishing exam" --text="Please wait while processing your request." --auto-close)
 
 # initiate the finish process
 json="$(${wget} -qO- "${urlFinish}")"
@@ -61,7 +61,7 @@ done
 exec 1>&-; exec 1>&0
 
 # Ask the user to shutdown
-if ${zenity} --question --title="Shutdown" --text="The exam was successfully handed in. Continue with shutting down the system?"; then
+if ${zenity} --width=300 --question --title="Shutdown" --text="The exam was successfully handed in. Continue with shutting down the system?"; then
   clientState "shutting down."
   /sbin/shutdown -h now
 fi
