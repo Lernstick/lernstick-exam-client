@@ -1,0 +1,66 @@
+#!/bin/sh
+
+# used by the hooks-functions of iniramfs-tools
+DESTDIR="/run/initramfs"
+verbose="y"
+
+# remount /run executable because we use it to run our shutdown script
+mount -o remount,rw /var/run/ /run/
+
+# Otherwise systemd-shutdown cannot execute /run/initramfs/shutdown
+mount -o remount,exec /run
+
+# create directories
+for d in etc bin sbin proc ; do
+  mkdir $DESTDIR/$d || true 2>/dev/null
+done
+
+# copy busybox and dependencies to /run/initramfs
+#. /usr/share/initramfs-tools/hooks/zz-busybox
+#. /root/zz-busybox
+# Bug is filed: https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=953563
+set -e
+
+case "${1:-}" in
+  prereqs)  echo ""; exit 0;;
+esac
+
+BB_BIN=/bin/busybox
+
+[ n = "$BUSYBOX" ] && exit 0
+
+[ -r /usr/share/initramfs-tools/hook-functions ] || exit 0
+. /usr/share/initramfs-tools/hook-functions
+
+if [ -f $DESTDIR/bin/sh ] && cmp -s $DESTDIR/bin/sh $BB_BIN ; then
+  # initramfs copies busybox into /bin/sh, undo this
+  rm -f $DESTDIR/bin/sh
+fi
+rm -f $DESTDIR/bin/busybox      # for compatibility with old initramfs
+copy_exec $BB_BIN /bin/busybox
+ln "$DESTDIR/usr/bin/busybox" "$DESTDIR/bin/busybox"
+
+for alias in $($BB_BIN --list-long); do
+  alias="${alias#/}"
+  case "$alias" in
+    # strip leading /usr, we don't use it
+    usr/*) alias="${alias#usr/}" ;;
+    */*) ;;
+    *) alias="bin/$alias" ;;  # make it into /bin
+  esac
+
+  [ -e "$DESTDIR/$alias" ] || \
+    ln "$DESTDIR/bin/busybox" "$DESTDIR/$alias"
+done
+
+# copy plymouth
+. /usr/share/initramfs-tools/hooks/plymouth
+
+# copy systemctl needed for final shutdown
+copy_exec /bin/systemctl
+
+# copy shutdown script, this script will be executed later by systemd-shutdown
+cp /lib/systemd/lernstick-shutdown $DESTDIR/shutdown
+
+# mount proc
+mount -o bind /proc $DESTDIR/proc
