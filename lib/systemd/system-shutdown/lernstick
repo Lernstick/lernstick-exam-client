@@ -21,10 +21,6 @@ done
 # Bug is filed: https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=953563
 set -e
 
-case "${1:-}" in
-  prereqs)  echo ""; exit 0;;
-esac
-
 BB_BIN=/bin/busybox
 
 [ n = "$BUSYBOX" ] && exit 0
