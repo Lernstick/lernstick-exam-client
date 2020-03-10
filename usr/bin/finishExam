@@ -51,7 +51,7 @@ clientState "waiting for last backup."
 # At this point, the last backup is initiated on the server. We now have to wait until
 # it's done. The server will write the state of the backup in a file. As soon as the
 # file contain a single "0", the backup is done and the script is alowwed to continue
-exec 1> >(${zenity} --progress --pulsate --no-cancel --title="Waiting for server" --text="Waiting for the latest backup to complete. This may take a few minutes..." --auto-close)
+exec 1> >(${zenity} --width=300 --progress --pulsate --no-cancel --title="Waiting for server" --text="Waiting for the latest backup to complete. This may take a few minutes..." --auto-close)
 backupState=$(cat "${backupStateFile}" 2>/dev/null)
 until [ "${backupState}" = "0" ]; do
   [ -n "${backupState}" ] && echo "#${backupState}"
