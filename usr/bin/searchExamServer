@@ -85,7 +85,7 @@ function do_exit()
 
   if isdeb9ornewer; then
     #pkill --signal 1 squid # causes squid to flush the iptables
-    squid -k reconfigure >/dev/null 2&>1; # iptables stays
+    squid -k reconfigure >/dev/null 2>&1; # iptables stays
   fi
 
   # remove firefox profile.ini entry for the profile searchExamServer
