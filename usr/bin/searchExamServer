@@ -20,6 +20,8 @@ envFile="/etc/lernstick-exam-client-env.conf"
 pid=$$
 
 # load environment variables, such as locale
+# If the script is called as a NetworkManager dispatcher script, we need to load these
+# locale, else all LC_*,LANG, ... would be set to POSIX
 set -a
 [ -e "${envFile}" ] && . "${envFile}"
 set +a
