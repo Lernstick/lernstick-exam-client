@@ -400,7 +400,12 @@ sudo -u user /usr/bin/firefox -profile "/tmp/searchExamServer" -no-remote --scre
 browser {margin-right: -14px; margin-bottom: -14px;}
 EOF
 ) | sudo -u user tee /tmp/searchExamServer/chrome/userChrome.css >/dev/null
- 
+
+# another hacky way to remove some firefox default settings at the first start
+echo 'user_pref("browser.tabs.warnOnClose", false);' >> /tmp/searchExamServer/prefs.js
+echo 'user_pref("datareporting.healthreport.service.firstRun", true);' >> /tmp/searchExamServer/prefs.js
+echo 'user_pref("datareporting.policy.dataSubmissionPolicyNotifiedTime", "1583945911");' >> /tmp/searchExamServer/prefs.js
+
 exec 1>&-; exec 1>&0
  
 # firefox can only be called with -profile "path" here, because the profile might not be
