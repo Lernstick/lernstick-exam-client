@@ -16,7 +16,13 @@ retoreStateFile="/run/initramfs/restore"
 infoFile="/run/initramfs/info"
 timeout=10
 configFile="/etc/lernstick-exam-client.conf"
+envFile="/etc/lernstick-exam-client-env.conf"
 pid=$$
+
+# load environment variables, such as locale
+set -a
+[ -e "${envFile}" ] && . "${envFile}"
+set +a
 
 # source os-release
 . /etc/os-release
@@ -367,10 +373,13 @@ EOF
 
 # firefox should not be run as root in a regular users session, and it's not supported anymore
 # This won't even create the profile appropriately
-sudo -u user /usr/bin/firefox -createprofile "searchExamServer /tmp/searchExamServer" -no-remote
+#sudo -u user /usr/bin/firefox -createprofile "searchExamServer /tmp/searchExamServer" -no-remote
 
 # solution adapted from https://superuser.com/questions/977912/firefox-hide-everything-except-content-area-of-the-browser/1269912#1269912
 sudo -u user mkdir -p /tmp/searchExamServer/chrome/
+
+# Dirty hacky way to convince firefox to create a profile (I hope noone ever sees this!)
+sudo -u user /usr/bin/firefox -profile "/tmp/searchExamServer" -no-remote --screenshot i-dont-exist
 (
   cat - <<EOF
 /*
