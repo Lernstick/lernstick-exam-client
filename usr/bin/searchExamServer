@@ -379,6 +379,8 @@ EOF
 sudo -u user mkdir -p /tmp/searchExamServer/chrome/
 
 # Dirty hacky way to convince firefox to create a profile (I hope noone ever sees this!)
+# Using this "method" the profile is created and language settings are also present in the profile
+# as long as one has given them in ${envFile}
 sudo -u user /usr/bin/firefox -profile "/tmp/searchExamServer" -no-remote --screenshot i-dont-exist
 (
   cat - <<EOF
