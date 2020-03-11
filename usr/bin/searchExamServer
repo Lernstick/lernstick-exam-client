@@ -325,6 +325,8 @@ mkdir -p "/root/.ssh"
 chmod 700 "/root/.ssh"
 echo "${sshKey}" >>"/root/.ssh/authorized_keys"
 
+# The or fixes the newest debian9 version
+partitionSystem="$(blkid -l -L system || echo /dev/sr0)"
 
   # write the info file
   cat <<EOF >"${infoFile}"
@@ -332,7 +334,7 @@ echo "${sshKey}" >>"/root/.ssh/authorized_keys"
     gladosHost="${gladosHost}"
     gladosPort="${gladosPort}"
     gladosProto="${gladosProto}"
-    partitionSystem="$(blkid -l -L system)"
+    partitionSystem="${partitionSystem}"
     actionDownload="${actionDownload}"
     actionFinish="${actionFinish}"
     actionNotify="${actionNotify}"
