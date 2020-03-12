@@ -7,6 +7,6 @@ Update changelog:
 
 Build the package with:
 
- dpkg-buildpackage -sa
+ dpkg-buildpackage -sa -us -uc
 
  -- Roman Gruber <roman.gruber@inf.unibe.ch>  Thu, 12 Mar 2020 10:31:58 +0100
