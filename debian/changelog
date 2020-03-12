@@ -1,3 +1,28 @@
+lernstick-exam-client (1.0.9) lernstick-9; urgency=medium
+
+  [ chaoos ]
+  * [a7ad3b] Update searchExamServer
+  * [21d562] -no-remote is needed when another instance of firefox is already running
+  * [db7f3a] autostart of search script fixed
+  * [e45acb] debian 10 support for the search script
+  * [18f688] Update searchExamServer
+  * [ac7133] Update finishExam
+  * [fd46fb] Update finishExam
+  * [ca3579] systemd-shutdown script changed
+  * [5cbea4] output redirection issue
+  * [d1454a] Update lernstick
+  * [b5a1ea] Update lernstick
+  * [c814eb] added ffmpeg dependency
+  * [6ffb73] obsolete, see https://github.com/imedias/lernstick-config/commit/1ae8194528ca58d9e686cc7e11f848bf59f577bd
+  * [9f5b7d] Update searchExamServer
+  * [f433f2] Fix for the system partition for newest deb9
+  * [6af6a2] create firefox profile in advance + environment variables
+  * [c284ee] envFile
+  * [fb4a5c] disable firefox default settings
+  * [cf91ee] comment
+
+ -- Roman Gruber <roman.gruber@inf.unibe.ch>  Thu, 12 Mar 2020 10:31:58 +0100
+
 lernstick-exam-client (1.0.8) lernstick-9; urgency=medium
 
   [ Ronny Standtke ]
