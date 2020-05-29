@@ -17,7 +17,8 @@ Depends: wget,
     iptables,
     gnome-icon-theme,
     oxygen-icon-theme,
-    ffmpeg
+    ffmpeg,
+    logkeys
 Provides: ${diverted-files}
 Conflicts: ${diverted-files}
 Description: Client for the Lernstick exam server GLaDOS
