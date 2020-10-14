@@ -34,7 +34,7 @@ EOFINNER
 fi
 
 url="${gladosProto}://${gladosIp}:${gladosPort}/glados/index.php/howto/welcome-to-exam.md?mode=inline"
-cat <<EOF >"/show_info.html"
+cat <<EOF >"/tmp/show_info.html"
 <!DOCTYPE html>
 <html lang='en-US'>
     <head>
@@ -51,7 +51,7 @@ EOF
 profile="$(mktemp -d)"
 cp -a /tmp/showInfo/. "$profile"
 
-/usr/bin/firefox -no-remote -profile "$profile" -width 850 -height 620 "/show_info.html"
+/usr/bin/firefox -no-remote -profile "$profile" -width 850 -height 620 "/tmp/show_info.html"
 
 # remove the profile - also remove it from the profiles.ini file
 rm -r "$profile"

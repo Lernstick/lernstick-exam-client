@@ -1,0 +1,9 @@
+[Unit]
+Description=live_overview
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/live_overview
+
+[Install]
+WantedBy=graphical.target
