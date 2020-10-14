@@ -1,5 +1,7 @@
 #!/bin/bash
 
+. /var/lib/lernstick-exam-client/functions.sh
+
 #/usr/bin/firefox -createprofile "showInfo /tmp/showInfo" -no-remote
 mkdir -p /tmp/showInfo/chrome/
 
@@ -30,6 +32,21 @@ EOFINNER
   echo 'user_pref("browser.tabs.warnOnClose", false);' >> /tmp/showInfo/prefs.js
 
 fi
+
+url="${gladosProto}://${gladosIp}:${gladosPort}/glados/index.php/howto/welcome-to-exam.md?mode=inline"
+cat <<EOF >"/show_info.html"
+<!DOCTYPE html>
+<html lang='en-US'>
+    <head>
+        <meta charset='UTF-8'>
+        <meta name='viewport' content='width=device-width, initial-scale=1'>
+        <meta http-equiv='refresh' content='0;url=${url}' />
+    </head>
+    <body>
+    Please wait, redirecting...
+    </body>
+</html>
+EOF
 
 profile="$(mktemp -d)"
 cp -a /tmp/showInfo/. "$profile"
