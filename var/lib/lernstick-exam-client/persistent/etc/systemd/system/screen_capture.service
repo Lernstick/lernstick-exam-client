@@ -1,0 +1,17 @@
+[Unit]
+Description=screen_capture
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/screen_capture
+ExecStop=/bin/bash -c 'kill $1; tail --pid=$1 -f /dev/null' sh $MAINPID
+ExecStopPost=/usr/bin/launch screen_capture
+Restart=always
+RestartSec=10
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=screen_capture
+
+[Install]
+WantedBy=graphical.target
+

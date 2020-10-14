@@ -28,6 +28,7 @@ set +o allexport
 resolution="$(xdpyinfo | awk '$1=="dimensions:"{print $2}')"
 gop="$(bc <<< "${chunk}*${fps}")"
 mkdir -p "${path}"
+cd "${path}"
 date="$(date +%s)"
 master="master${date}.m3u8"
 playlist="video${date}.m3u8"

@@ -23,6 +23,7 @@ else
     keymap="--keymap /usr/share/logkeys/keymaps/${keymap}.map"
 fi
 mkdir -p "${path}"
+cd "${path}"
 
 logkeys --start --no-daemon --no-timestamps $keymap -o - | while read -n1 char; do
     # outputs enclosed in square brackets like <enter> should be on one line
