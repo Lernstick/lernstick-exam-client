@@ -4,7 +4,7 @@ Description=lernstick-exam-agent
 [Service]
 Type=simple
 ExecStart=/usr/bin/lernstick-exam-agent
-ExecStop=/bin/bash -c 'kill \$1; tail --pid=\$1 -f /dev/null' sh \$MAINPID
+ExecStop=/bin/bash -c 'kill $1; tail --pid=$1 -f /dev/null' sh $MAINPID
 Restart=always
 RestartSec=10
 
