@@ -1,0 +1,9 @@
+[Unit]
+Description=launch
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/launch
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=screen_capture
