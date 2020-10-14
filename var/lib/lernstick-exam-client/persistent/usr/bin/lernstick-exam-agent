@@ -9,7 +9,7 @@ import subprocess # subprocess.Popen(), subprocess.check_output()
 from types import SimpleNamespace # json to python object
 
 CONFIG_FILE = '/etc/lernstick-exam-client/agent.json'
-INFO_FILE = '/tmp/info'
+INFO_FILE = '/info'
 INFO_FILE_URL = 'actionConfig'
 DEBUG = True
 VERBOSE = True
