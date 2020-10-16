@@ -17,7 +17,7 @@ infoFile="/run/initramfs/info"
 timeout=10
 configFile="/etc/lernstick-exam-client.conf"
 envFile="/etc/lernstick-exam-client-env.conf"
-compatFile="/usr/share/lernstick-exan-client/compatibility.json"
+compatFile="/usr/share/lernstick-exam-client/compatibility.json"
 pid=$$
 
 # load environment variables, such as locale
