@@ -17,6 +17,7 @@ infoFile="/run/initramfs/info"
 timeout=10
 configFile="/etc/lernstick-exam-client.conf"
 envFile="/etc/lernstick-exam-client-env.conf"
+compatFile="/usr/share/lernstick-exan-client/compatibility.json"
 pid=$$
 
 # load environment variables, such as locale
@@ -158,6 +159,32 @@ function config_value()
   echo "$v"
 }
 
+function verToNr()
+{
+  local r="0";
+  local n=0
+  IFS=$'.'
+  for nr in $1; do
+    n=$((n+1))
+  done
+  n=5
+  for nr in $1; do
+    r="$r + 100^$n*$nr"
+    n=$((n-1))
+  done
+  unset IFS
+  echo "$r" | bc
+}
+
+function check_version()
+{
+  local ver=$(verToNr "$1")
+  local wants="$2"
+  [[ "$wants" =~ ([\>,\<,\=]+)([0-9,\.]+) ]]
+  local op="${BASH_REMATCH[1]}"
+  local cver="$(verToNr ${BASH_REMATCH[2]})"
+  (($ver $op $cver))
+}
 
 cat <<'EOF' >/tmp/convert.py
 import re
@@ -282,6 +309,9 @@ for action in Download Finish Notify SSHKey Md5 Config; do
   fi
 done
 
+# get the info URL
+actionInfo="${actionSSHKey/ticket\/ssh-key/config\/info}"
+
 $DEBUG && >&2 echo "Exam server found."
 echo "#$(gettext "Exam server found.")"
 sleep 1
@@ -297,7 +327,7 @@ if [ "$fixed" = "true" ]; then
 fi
 
 ZENITY_TITLE="$(gettext "SSH Key")"
-ZENITY_TEXT="$(gettext "Fetching SSH Key from the server.")"
+ZENITY_TEXT="$(gettext "Fetching server information.")"
 exec 1> >(${zenity} --progress --pulsate --no-cancel --title="${ZENITY_TITLE}" --text="${ZENITY_TEXT}" --auto-close)
 
 # open ports in the firewall
@@ -326,6 +356,39 @@ if [ ${retval} -ne 0 ]; then
   >&2 echo "wget failed while fetching the SSH key. Error: ${WGET_ERROR}."
   ${zenity} --error --title "$(gettext "Wget error")" --text "$(eval_gettext "wget failed while fetching the SSH key. Error: \${WGET_ERROR}.")"
   do_exit "wget failed while fetching the SSH key."
+fi
+
+# get server information
+client_version="$(cat "$compatFile" | ${python} -c 'import sys, json; print json.load(sys.stdin)["client_version"]')"
+wants_server_version="$(cat "$compatFile" | ${python} -c 'import sys, json; print json.load(sys.stdin)["wants_server_version"]')"
+jsonInfo="$(${wget} ${wgetOptions} -qO- "${actionInfo}")"
+
+retval=$?
+if [ ${retval} -eq 0 ]; then
+  # check version
+  >&2 echo "check version"
+  server_version="$(echo "$jsonInfo" | ${python} -c 'import sys, json; print json.load(sys.stdin)["server_version"]')"
+  wants_client_version="$(echo "$jsonInfo" | ${python} -c 'import sys, json; print json.load(sys.stdin)["wants_client_version"]')"
+  >&2 echo "client_version = $client_version"
+  >&2 echo "wants_server_version = $wants_server_version"
+  >&2 echo "server_version = $server_version"
+  >&2 echo "wants_client_version = $wants_client_version"
+  if ! check_version "$server_version" "$wants_server_version"; then
+    >&2 echo "Server version mismatch. Got ${server_version}, but client needs ${wants_server_version}."
+    ${zenity} --error --title "$(gettext "Version Error")" --text "$(eval_gettext "Server version mismatch. Got \${server_version}, but client needs \${wants_server_version}.")"
+    do_exit "Server version mismatch. Got ${server_version}, but client needs ${wants_server_version}."
+  fi
+  if ! check_version "$client_version" "$wants_client_version"; then
+    >&2 echo "Client version mismatch. Got ${client_version}, but server needs ${wants_client_version}."
+    ${zenity} --error --title "$(gettext "Version Error")" --text "$(eval_gettext "Client version mismatch. Got \${client_version}, but server needs \${wants_client_version}.")"
+    do_exit "Client version mismatch. Got ${client_version}, but server needs ${wants_client_version}."
+  fi
+else
+  # server has no info page -> version mismatch
+  server_version="unknown"
+  >&2 echo "Server version mismatch. Got ${server_version}, but client needs ${wants_server_version}."
+  ${zenity} --error --title "$(gettext "Version Error")" --text "$(eval_gettext "Server version mismatch. Got \${server_version}, but client needs \${wants_server_version}.")"
+  do_exit "Server version mismatch. Got ${server_version}, but client needs ${wants_server_version}."
 fi
 
 # create environment
