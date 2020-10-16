@@ -149,7 +149,7 @@ function config_value()
     if [ ${retval} -ne 0 ]; then
       WGET_ERROR="${wgetErrors[$retval]} (${retval})"
       >&2 echo "wget failed while fetching the system config. Error: ${WGET_ERROR}."
-      ${zenity} --error --title "$(gettext "Wget error")" --text "$(eval_gettext "wget failed while fetching the system config. Error: \${WGET_ERROR}.")"
+      ${zenity} --error --width=300 --title "$(gettext "Wget error")" --text "$(eval_gettext "wget failed while fetching the system config. Error: \${WGET_ERROR}.")"
       do_exit "wget failed while fetching the system config."
     fi
   fi
@@ -292,7 +292,7 @@ fi
 
 if [ -z "$gladosIp" ] || [ -z "$gladosPort" ]; then
   $DEBUG && >&2 echo "Glados host not found."
-  zenity --error --title="$(gettext "Error")" --text="$(gettext "Glados host not found.")"
+  zenity --error --width=300 --title="$(gettext "Error")" --text="$(gettext "Glados host not found.")"
   do_exit "Glados host not found."
 fi
 
@@ -304,7 +304,7 @@ for action in Download Finish Notify SSHKey Md5 Config; do
   else
     ERROR_MESSAGE="$(gettext "action\${action} not found in txt field.")"
     $DEBUG && >&2 echo "${ERROR_MESSAGE}"
-    zenity --error --title="$(gettext "Error")" --text="${ERROR_MESSAGE}"
+    zenity --error --width=300 --title="$(gettext "Error")" --text="${ERROR_MESSAGE}"
     do_exit "action not found in txt field."
   fi
 done
@@ -354,12 +354,13 @@ retval=$?
 if [ ${retval} -ne 0 ]; then
   WGET_ERROR="${wgetErrors[$retval]} (${retval})"
   >&2 echo "wget failed while fetching the SSH key. Error: ${WGET_ERROR}."
-  ${zenity} --error --title "$(gettext "Wget error")" --text "$(eval_gettext "wget failed while fetching the SSH key. Error: \${WGET_ERROR}.")"
+  ${zenity} --error --width=300 --title "$(gettext "Wget error")" --text "$(eval_gettext "wget failed while fetching the SSH key. Error: \${WGET_ERROR}.")"
   do_exit "wget failed while fetching the SSH key."
 fi
 
 # get server information
 client_version="$(cat "$compatFile" | ${python} -c 'import sys, json; print json.load(sys.stdin)["client_version"]')"
+lernstick_version="$(grep -oP '[0-9,\-]{8,}' /usr/local/lernstick.html | sed 's/-//g' | head -1)"
 wants_server_version="$(cat "$compatFile" | ${python} -c 'import sys, json; print json.load(sys.stdin)["wants_server_version"]')"
 jsonInfo="$(${wget} ${wgetOptions} -qO- "${actionInfo}")"
 
@@ -369,25 +370,31 @@ if [ ${retval} -eq 0 ]; then
   >&2 echo "check version"
   server_version="$(echo "$jsonInfo" | ${python} -c 'import sys, json; print json.load(sys.stdin)["server_version"]')"
   wants_client_version="$(echo "$jsonInfo" | ${python} -c 'import sys, json; print json.load(sys.stdin)["wants_client_version"]')"
+  wants_lernstick_version="$(echo "$jsonInfo" | ${python} -c 'import sys, json; print json.load(sys.stdin)["wants_lernstick_version"]')"
   >&2 echo "client_version = $client_version"
   >&2 echo "wants_server_version = $wants_server_version"
   >&2 echo "server_version = $server_version"
   >&2 echo "wants_client_version = $wants_client_version"
   if ! check_version "$server_version" "$wants_server_version"; then
     >&2 echo "Server version mismatch. Got ${server_version}, but client needs ${wants_server_version}."
-    ${zenity} --error --title "$(gettext "Version Error")" --text "$(eval_gettext "Server version mismatch. Got \${server_version}, but client needs \${wants_server_version}.")"
+    ${zenity} --error --width=300 --title "$(gettext "Version Error")" --text "$(eval_gettext "Server version mismatch. Got \${server_version}, but client needs \${wants_server_version}.")"
     do_exit "Server version mismatch. Got ${server_version}, but client needs ${wants_server_version}."
+  fi
+  if ! check_version "$lernstick_version" "$wants_lernstick_version"; then
+    >&2 echo "Lernstick version mismatch. Got ${lernstick_version}, but server needs ${wants_lernstick_version}."
+    ${zenity} --error --width=300 --title "$(gettext "Version Error")" --text "$(eval_gettext "Lernstick version mismatch. Got \${lernstick_version}, but server needs \${wants_lernstick_version}.")"
+    do_exit "Lernstick version mismatch. Got ${lernstick_version}, but server needs ${wants_lernstick_version}."
   fi
   if ! check_version "$client_version" "$wants_client_version"; then
     >&2 echo "Client version mismatch. Got ${client_version}, but server needs ${wants_client_version}."
-    ${zenity} --error --title "$(gettext "Version Error")" --text "$(eval_gettext "Client version mismatch. Got \${client_version}, but server needs \${wants_client_version}.")"
+    ${zenity} --error --width=300 --title "$(gettext "Version Error")" --text "$(eval_gettext "Client version mismatch. Got \${client_version}, but server needs \${wants_client_version}.")"
     do_exit "Client version mismatch. Got ${client_version}, but server needs ${wants_client_version}."
   fi
 else
   # server has no info page -> version mismatch
   server_version="unknown"
   >&2 echo "Server version mismatch. Got ${server_version}, but client needs ${wants_server_version}."
-  ${zenity} --error --title "$(gettext "Version Error")" --text "$(eval_gettext "Server version mismatch. Got \${server_version}, but client needs \${wants_server_version}.")"
+  ${zenity} --error --width=300 --title "$(gettext "Version Error")" --text "$(eval_gettext "Server version mismatch. Got \${server_version}, but client needs \${wants_server_version}.")"
   do_exit "Server version mismatch. Got ${server_version}, but client needs ${wants_server_version}."
 fi
 
