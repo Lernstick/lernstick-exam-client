@@ -51,8 +51,7 @@ class Event:
                 command = self.command,
                 env     = str(env)
             ))
-        self.process = subprocess.Popen(
-            ["sh", "-c", self.command],
+        self.process = subprocess.Popen(["sh", "-c", self.command],
             env = env
         )
 
@@ -97,11 +96,9 @@ if len(sys.argv) >= 2:
 
     if event.isInConfig():
         event.trigger()
-        exit(0)
     else:
         print('Event not found on config')
         exit(1)
-
 
 # mode 2: listen for events
 else:
@@ -165,4 +162,5 @@ else:
 
         if VERBOSE: print('Sleeping {0:0.2f} seconds ...'.format(retry/1000))
         time.sleep(retry/1000)
+
 
