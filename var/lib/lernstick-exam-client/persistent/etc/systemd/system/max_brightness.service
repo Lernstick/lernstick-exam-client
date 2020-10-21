@@ -1,0 +1,8 @@
+[Unit]
+Description=max_brightness
+
+[Service]
+ExecStart=/usr/bin/max_brightness
+
+[Install]
+WantedBy=multi-user.target

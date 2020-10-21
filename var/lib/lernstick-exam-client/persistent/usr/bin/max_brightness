@@ -1,0 +1,32 @@
+#!/bin/bash
+
+. /var/lib/lernstick-exam-client/functions.sh
+
+ratio="$(config_value "max_brightness" "100")"
+exist=0
+[ -n "$(ls /sys/class/backlight/ 2>/dev/null)" ] && exist=1
+
+if [ "${exist}" = "1" ] && [ "${ratio}" -ne "100" ] ; then
+
+  for backlight in /sys/class/backlight/*; do
+    if [ -e "$backlight/brightness" ] && [ -e "$backlight/actual_brightness" ] && [ -e "$backlight/max_brightness" ]; then
+      list="${list} ${backlight}/brightness"
+      init="${init}${backlight}/brightness MODIFY\n"
+    fi
+  done
+
+  ( echo -en "$init" && ( which inotifywait && notifywait -m -e MODIFY ${list} || while true; do sleep 1; echo -en "$init"; done ) ) | while read backlight action; do
+    backlight=${backlight%/brightness}
+    max=$(cat ${backlight}/max_brightness)
+    brightness=$(printf "%.0f\n" $(echo "scale=2; (${ratio}/100)*${max}" | bc))
+    mom=$(printf "%.0f\n" $(echo "scale=2; $(cat ${backlight}/actual_brightness)/(${max}/100)" | bc))
+
+    if [ "${mom}" -gt "${ratio}" ]; then
+      echo ${brightness} >${backlight}/brightness
+    fi
+  done
+
+else
+  echo "No backlight found or ratio=100. Nothing to do, sleeping."
+  while true; do sleep 10000; done
+fi
