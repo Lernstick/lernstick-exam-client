@@ -8,10 +8,10 @@ set -o allexport
 . <(strings /proc/*/environ 2>/dev/null | awk -F= '$1=="DISPLAY"||$1=="XAUTHORITY"' | head -2)
 set +o allexport
 
-interval="1"
+interval="1" #seconds
 width="260"
 url=${urlLive:-${urlDownload/download/live}}
-duration="60" #seconds
+duration="100" # iterations
 
 i=0
 while [ "$i" -lt "$duration" ]; do
