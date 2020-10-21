@@ -1,0 +1,21 @@
+#!/usr/bin/env python3
+
+import wx
+import wx.html2
+
+class MyBrowser(wx.Frame):
+    def __init__(self, *args, **kwds):
+        wx.Frame.__init__(self, *args, **kwds)
+        self.browser = wx.html2.WebView.New(self)
+        self.SetSize((800, 310))
+        #self.ShowFullScreen(True)
+        #self.browser.EnableContextMenu(False)
+
+if __name__ == '__main__':
+    app = wx.App(False)
+    url = 'http://192.168.0.17/glados/index.php/ticket/download/{token}'
+    dialog = MyBrowser(None, -1, title="Lernstick Exam Client")
+    dialog.browser.LoadURL(url.format(token = ''))
+    dialog.Show()
+    app.MainLoop()
+
