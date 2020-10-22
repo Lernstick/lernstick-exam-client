@@ -1,21 +1,87 @@
 #!/usr/bin/env python3
 
-import wx
-import wx.html2
+import sys # sys.argv
+import wx # wx.App(), wx.Frame()
+import wx.html2 # wx.html2.WebView
+import re # re.comple(), re.match()
+import argparse # argparse.ArgumentParser()
 
-class MyBrowser(wx.Frame):
+def geometry(arg):
+    regex = re.compile(r"^[0-9]+x[0-9]+$")
+    if not regex.match(arg):
+        raise argparse.ArgumentTypeError
+    return tuple(map(int, arg.split('x')))
+
+class Window(wx.Frame):
+    # derives a new class from Frame
     def __init__(self, *args, **kwds):
         wx.Frame.__init__(self, *args, **kwds)
+        self.childs = []
         self.browser = wx.html2.WebView.New(self)
-        self.SetSize((800, 310))
-        #self.ShowFullScreen(True)
-        #self.browser.EnableContextMenu(False)
+        self.browser.Bind(wx.html2.EVT_WEBVIEW_LOADED, self.onLoaded)
+        self.browser.Bind(wx.html2.EVT_WEBVIEW_NAVIGATING, self.onClicked) # may be stopped by Veto()
+        self.browser.Bind(wx.html2.EVT_WEBVIEW_NAVIGATED, self.onRequested) # may not be stopped
+        self.browser.Bind(wx.html2.EVT_WEBVIEW_NEWWINDOW, self.onNewWindow)
+        self.statusbar = self.CreateStatusBar(1)
+        self.statusbar.Hide()
+
+    def Load(self):
+        self.browser.LoadURL(args.url)
+        if self.args.icon: self.SetIcon(wx.Icon(self.args.icon))
+        if self.args.fullscreen: self.ShowFullScreen(True)
+        if self.args.geometry is not None: self.SetSize(self.args.geometry)
+        if self.args.center: self.CentreOnScreen()
+
+    def onLoaded(self, event):
+        if self.args.verbose: print("loaded", event.URL)
+        self.SetTitle(self.browser.GetCurrentTitle())
+        self.statusbar.Hide()
+
+    def onClicked(self, event):
+        if self.args.verbose: print("clicked", event.URL)
+        try:
+            proto, data = event.URL.split("://", 2)
+            if proto == "wxbrowser":
+                if self.args.verbose: print("Event Caught! Data = ", data)
+                event.Veto() # prevent actual navigation
+        except: pass
+
+    def onRequested(self, event):
+        if self.args.verbose: print("requested", event.URL)
+        self.statusbar.SetStatusText('loading ...')
+        self.statusbar.Show()
+
+    def onNewWindow(self, event):
+        if self.args.verbose: print("newwindow", event.URL)
+        window = Window(None, -1)
+        window.args = self.args
+        window.args.geometry = self.args.new_window_geometry
+        window.args.url = event.URL
+        window.Load()
+        window.Show()
+        self.childs.append(window)
+
 
 if __name__ == '__main__':
-    app = wx.App(False)
-    url = 'http://192.168.0.17/glados/index.php/ticket/download/{token}'
-    dialog = MyBrowser(None, -1, title="Lernstick Exam Client")
-    dialog.browser.LoadURL(url.format(token = ''))
-    dialog.Show()
-    app.MainLoop()
+    # parse the command line arguments
+    parser = argparse.ArgumentParser(description="a simple lighweight browser using wxPython")
+    parser.add_argument("url", help="the url to show in the browser window.")
+    parser.add_argument("--verbose", "-v", help="verbose output", action="store_true")
+    parser.add_argument("--icon", "-i", help="the icon", metavar='PATH')
+    parser.add_argument("--name", "-n", help="the name of the executable to be shown in the dash or taskbar", default=sys.argv[0])
+    parser.add_argument("--center", "-c", help="centres the window on screen", action="store_true")
+    parser.add_argument("--new-window-geometry", "-ng", help="the width and height in pixels of a new window", type=geometry, metavar='WIDTHxHEIGHT', default='800x600')
+    arg_group = parser.add_mutually_exclusive_group()
+    arg_group.add_argument("--geometry", "-g", help="the width and height in pixels", type=geometry, metavar='WIDTHxHEIGHT')
+    arg_group.add_argument("--fullscreen", "-f", help="show the window in fullscreen", action="store_true")
+    args = parser.parse_args()
 
+    # set the executable name
+    sys.argv[0] = args.name
+
+    app = wx.App(False)
+    window = Window(None, -1)
+    window.args = args
+    window.Load()
+    window.Show()
+    app.MainLoop()
