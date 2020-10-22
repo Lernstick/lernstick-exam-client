@@ -95,22 +95,6 @@ function do_exit()
   #pkill --signal 1 squid # causes squid to flush the iptables
   isdeb9ornewer && squid -k reconfigure # iptables stays
 
-  # remove firefox profile.ini entry for the profile searchExamServer
-  if [ -e /home/user/.mozilla/firefox/profiles.ini ]; then
-    awk 'BEGIN { STATE=1; C=0; } 
-      STATE==3{ S="" }
-      /\[[Pp]rofile[0-9]+\]/ {STATE=2; C=0; if(S!=""){print S "(new profile)"}; S="";}
-      /\[/ && C>0 { STATE=1; if(S!="") {print S "(new Section)"};}
-      /[Pp]ath *= *.tmp.searchExamServer/ && STATE==2 { STATE=3; S="";}
-      /[Pp]ath/ && STATE==2 { print S;STATE=1;S=""; }
-      STATE==2 { S=S "\n" $0; }
-      STATE==1 { print; }
-      // {C=C+1;}
-      END { print S;} ' </home/user/.mozilla/firefox/profiles.ini >/home/user/.mozilla/firefox/profiles.ini.new && mv /home/user/.mozilla/firefox/profiles.ini.new /home/user/.mozilla/firefox/profiles.ini
-  fi
-
-  [ -e /tmp/searchExamServer ] && rm -r /tmp/searchExamServer
-
   killtree $pid
 
   # remove the trap
@@ -426,64 +410,7 @@ mount -n -o remount,exec /run
 
 url="${actionDownload//\{token\}/$token}"
 
-cat <<EOF >"/run/initramfs/init.html"
-<!DOCTYPE html>
-<html lang='en-US'>
-    <head>
-        <meta charset='UTF-8'>
-        <meta name='viewport' content='width=device-width, initial-scale=1'>
-        <meta http-equiv='refresh' content='0;url=${url}' />
-    </head>
-    <body>
-    Please wait, redirecting...
-    </body>
-</html>
-EOF
-
-# remove the profile if it already exists
-[ -e /tmp/searchExamServer ] && rm -r /tmp/searchExamServer
-
-# firefox should not be run as root in a regular users session, and it's not supported anymore
-# This won't even create the profile appropriately
-#sudo -u user /usr/bin/firefox -createprofile "searchExamServer /tmp/searchExamServer" -no-remote
-
-# solution adapted from https://superuser.com/questions/977912/firefox-hide-everything-except-content-area-of-the-browser/1269912#1269912
-sudo -u user mkdir -p /tmp/searchExamServer/chrome/
-
-# Dirty hacky way to convince firefox to create a profile (I hope noone ever sees this!)
-# Using this "method" the profile is created and language settings are also present in the profile
-# as long as one has given them in ${envFile}
-# SIGINT after 4 seconds, SIGKILL after 8 seconds (a workaround for older firefoxes)
-timeout -s INT -k 8 4 \
-  sudo -u user \
-    /usr/bin/firefox -profile "/tmp/searchExamServer" -no-remote --screenshot i-dont-exist
-(
-  cat - <<EOF
-/*
- * set default namespace to XUL
- */
-@namespace url("http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul");
- 
-/*
- * Hide tab bar, navigation bar and scrollbars
- * !important may be added to force override, but not necessary
- * #content is not necessary to hide scroll bars
- */
-#toolbar-context-menu {display: none !important;}
-#TabsToolbar {visibility: collapse;}
-#navigator-toolbox {visibility: collapse;}
-browser {margin-right: -14px; margin-bottom: -14px;}
-EOF
-) | sudo -u user tee /tmp/searchExamServer/chrome/userChrome.css >/dev/null
-
-# another hacky way to remove some firefox default settings at the first start
-echo 'user_pref("browser.tabs.warnOnClose", false);' >> /tmp/searchExamServer/prefs.js
-echo 'user_pref("datareporting.healthreport.service.firstRun", true);' >> /tmp/searchExamServer/prefs.js
-echo 'user_pref("datareporting.policy.dataSubmissionPolicyNotifiedTime", "1583945911");' >> /tmp/searchExamServer/prefs.js
-
 exec 1>&-; exec 1>&0
- 
-# firefox can only be called with -profile "path" here, because the profile might not be
-# created using -createprofile before, therefore -P "profilename" won't work anymore
-sudo -u user /usr/bin/firefox -no-remote -profile "/tmp/searchExamServer" -width 800 -height 310 "/run/initramfs/init.html"
-[ -e /tmp/searchExamServer ] && rm -r /tmp/searchExamServer
+
+# open wxbrowser
+sudo -u user /usr/bin/wxbrowser --geometry 800x310 -c "${url}"

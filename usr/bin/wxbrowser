@@ -40,11 +40,30 @@ class Window(wx.Frame):
     def onClicked(self, event):
         if self.args.verbose: print("clicked", event.URL)
         try:
-            proto, data = event.URL.split("://", 2)
-            if proto == "wxbrowser":
-                if self.args.verbose: print("Event Caught! Data = ", data)
-                event.Veto() # prevent actual navigation
-        except: pass
+            url, anchor = event.URL.split("#", 1)
+            if self.args.verbose: print("anchor", anchor)
+            try:
+                proto, data = anchor.split(":", 1)
+                if self.args.verbose: print("proto", proto)
+                if proto == "wxbrowser":
+                    try: action, arg = data.split(":", 1)
+                    except ValueError: action, arg = data, None
+                    self.callAction(action, arg)
+                    event.Veto() # prevent actual navigation
+            except ValueError: pass
+        except ValueError: pass
+
+    def callAction(self, action, arg):
+        if action == 'resize':
+            self.args.geometry = geometry(arg)
+            if self.args.verbose: print("resizing window to {0}".format(arg))
+            self.SetSize(self.args.geometry)
+            if self.args.center: self.CentreOnScreen()
+        elif action == 'close':
+            if self.args.verbose: print("closing window")
+            return self.Close()
+        else:
+            if self.args.verbose: print("action {0} not found".format(action))
 
     def onRequested(self, event):
         if self.args.verbose: print("requested", event.URL)
