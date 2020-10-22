@@ -413,4 +413,4 @@ url="${actionDownload//\{token\}/$token}"
 exec 1>&-; exec 1>&0
 
 # open wxbrowser
-sudo -u user /usr/bin/wxbrowser --geometry 800x310 -c "${url}"
+sudo -u user /usr/bin/wxbrowser --geometry "800x310" -c -n "Exam Client" -i "/usr/share/icons/oxygen/base/128x128/actions/system-search.png" "${url}"
