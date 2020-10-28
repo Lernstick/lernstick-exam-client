@@ -12,7 +12,9 @@ chunk="10" # in seconds
 
 # find the keymap file from the currently running Xorg process
 if [ "${keymap}" = "auto" ]; then
-    export $(strings /proc/$(pgrep Xorg)/environ | grep -P "^LANG=" | head -1)
+    pid="$(pgrep Xorg)"
+    [ "$?" = 1 ] && exit 1 # exit the script when the keymap cannot be determined
+    export $(strings /proc/${pid}/environ | grep -P "^LANG=" | head -1)
     keymap="${LANG%%.*}"
 fi
 
