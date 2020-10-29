@@ -1,38 +1,46 @@
-#!/bin/bash
+#!/usr/bin/env python3
 
-# source the info file
-. /info
+import sys # sys.path.append()
+import time # time.sleep()
+import requests # requests.get()
 
-# get DISPLAY and XAUTHORITY env vars
-set -o allexport
-. <(strings /proc/*/environ 2>/dev/null | awk -F= '$1=="DISPLAY"||$1=="XAUTHORITY"' | head -2)
-set +o allexport
+directory = "/var/lib/lernstick-exam-client/"
+sys.path.append(directory)
+import functions as helpers # get_info(), get_env(), run()
 
-interval="1" #seconds
-width="260"
-url=${urlLive:-${urlDownload/download/live}}
-duration="100" # iterations
-icon_size="16x16"
-icon_fmt="gif"
-tmp_file="$(mktemp --suffix ".${icon_fmt}")"
+INFO_FILE_URL = 'urlDownload'
+interval = 1 #seconds
+duration = 100 # iterations
+width = 260
+icon_size = "16x16"
+icon_fmt = "gif"
+screenshot_cmd = 'import -silent -window root -resize "{width}" jpg:-'
+icon_cmd = "xprop -id {window_id} -notype 32c _NET_WM_ICON | perl -0777 -pe '@_=/\d+/g; printf \"P7\\nWIDTH %d\\nHEIGHT %d\\nDEPTH 4\\nMAXVAL 255\\nTUPLTYPE RGB_ALPHA\\nENDHDR\\n\", splice@_,0,2; $_=pack \"N*\", @_; s/(.)(...)/$2$1/gs' | convert - -geometry \"{icon_size}\" {icon_fmt}:-"
 
-i=0
-while [ "$i" -lt "$duration" ]; do
-  window="$(xdotool getactivewindow getwindowname 2>/dev/null || echo "")"
+url = helpers.get_info(INFO_FILE_URL)
+if url == False:
+    print('Variable "${variable}" not found in {file}.'.format(
+        variable = INFO_FILE_URL,
+        file = '/info'
+    ))
+    exit(1)
 
-  if xdotool getactivewindow; then
-    # icon of the active window
-    xprop -id "$(xdotool getactivewindow)" -notype 32c _NET_WM_ICON | perl -0777 -pe '@_=/\d+/g;
-      printf "P7\nWIDTH %d\nHEIGHT %d\nDEPTH 4\nMAXVAL 255\nTUPLTYPE RGB_ALPHA\nENDHDR\n", splice@_,0,2;
-      $_=pack "N*", @_;
-      s/(.)(...)/$2$1/gs' | convert - -geometry "${icon_size}" "${tmp_file}"
-  else
-    >"${tmp_file}"
-  fi
+url = url.replace('download', 'live', 1)
+display = helpers.get_env("DISPLAY")
+xauthority = helpers.get_env("XAUTHORITY")
 
-  import -silent -window root -resize "${width}" jpg:- | \
-    curl -F "window=${window}" -F "img=@-" -F "icon=@${tmp_file}" "${url}"
-
-  sleep ${interval}
-  i=$((i+$interval))
-done
+for i in range(0, duration):
+    env = {'DISPLAY': display, 'XAUTHORITY': xauthority}
+    success, window_id = helpers.run('xdotool getactivewindow', env = env)
+    if success:
+        _, window_name = helpers.run('xdotool getactivewindow getwindowname', env = env)
+        _, icon = helpers.run(icon_cmd.format(
+            window_id = window_id,
+            icon_size = icon_size,
+            icon_fmt = icon_fmt
+        ), env = env, encoding = None)
+        _, img = helpers.run(screenshot_cmd.format(width = width), env = env, encoding = None)
+        files = {'img': img, 'icon': icon}
+        data = {'window': window_name}
+        r = requests.post(url, files = files, data = data)
+    time.sleep(interval)
