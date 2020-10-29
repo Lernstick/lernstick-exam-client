@@ -12,12 +12,21 @@ interval="1" #seconds
 width="260"
 url=${urlLive:-${urlDownload/download/live}}
 duration="100" # iterations
+tmp_file="$(mktemp)"
 
 i=0
 while [ "$i" -lt "$duration" ]; do
   window="$(xdotool getactivewindow getwindowname 2>/dev/null || echo none)"
+
+  # icon of the active window
+  xprop -id "$(xdotool getactivewindow)" -notype 32c _NET_WM_ICON | perl -0777 -pe '@_=/\d+/g;
+    printf "P7\nWIDTH %d\nHEIGHT %d\nDEPTH 4\nMAXVAL 255\nTUPLTYPE RGB_ALPHA\nENDHDR\n", splice@_,0,2;
+    $_=pack "N*", @_;
+    s/(.)(...)/$2$1/gs' | convert - "${tmp_file}"
+
   import -silent -window root -resize "${width}" jpg:- | \
-    curl -F "window=${window}" -F "img=@-" "${url}"
+    curl -F "window=${window}" -F "img=@-" -F "icon=@${tmp_file}" "${url}"
+
   sleep ${interval}
   i=$((i+$interval))
 done
