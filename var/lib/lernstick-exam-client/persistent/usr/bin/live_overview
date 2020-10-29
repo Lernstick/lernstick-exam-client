@@ -10,8 +10,8 @@ import functions as helpers # get_info(), get_env(), run()
 
 INFO_FILE_URL = 'urlDownload'
 interval = 1 #seconds
-duration = 100 # iterations
-width = 260
+duration = 120 # iterations
+width = 260 # pixels
 icon_size = "16x16"
 icon_fmt = "gif"
 screenshot_cmd = 'import -silent -window root -resize "{width}" jpg:-'
@@ -29,18 +29,25 @@ url = url.replace('download', 'live', 1)
 display = helpers.get_env("DISPLAY")
 xauthority = helpers.get_env("XAUTHORITY")
 
+last_icon, last_window  = None, None
+
 for i in range(0, duration):
     env = {'DISPLAY': display, 'XAUTHORITY': xauthority}
     success, window_id = helpers.run('xdotool getactivewindow', env = env)
     if success:
-        _, window_name = helpers.run('xdotool getactivewindow getwindowname', env = env)
+        _, window = helpers.run('xdotool getactivewindow getwindowname', env = env)
         _, icon = helpers.run(icon_cmd.format(
             window_id = window_id,
             icon_size = icon_size,
             icon_fmt = icon_fmt
         ), env = env, encoding = None)
-        _, img = helpers.run(screenshot_cmd.format(width = width), env = env, encoding = None)
-        files = {'img': img, 'icon': icon}
-        data = {'window': window_name}
-        r = requests.post(url, files = files, data = data)
+    else:
+        window, icon = '', ''
+
+    _, img = helpers.run(screenshot_cmd.format(width = width), env = env, encoding = None)
+    data = {'window': window} if last_window != window else {}
+    files = {'img': img, 'icon': icon} if last_icon != icon else {'img': img}
+    last_icon, last_window = icon, window
+    
+    r = requests.post(url, files = files, data = data)
     time.sleep(interval)
