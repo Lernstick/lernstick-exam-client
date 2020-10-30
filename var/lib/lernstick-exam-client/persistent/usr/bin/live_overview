@@ -3,19 +3,23 @@
 import sys # sys.path.append()
 import time # time.sleep()
 import requests # requests.get()
+from types import SimpleNamespace # json to python object
 
 directory = "/var/lib/lernstick-exam-client/"
 sys.path.append(directory)
 import functions as helpers # get_info(), get_env(), run()
 
-INFO_FILE_URL = 'urlDownload'
 interval = 1 #seconds
-duration = 120 # iterations
 width = 260 # pixels
+stop_after = 10 # seconds (ideally multiple intervals, not only one)
 icon_size = "16x16"
 icon_fmt = "gif"
+VERBOSE = True
+
+max_duration = interval*600 # max_duration after stopping
 screenshot_cmd = 'import -silent -window root -resize "{width}" jpg:-'
 icon_cmd = "xprop -id {window_id} -notype 32c _NET_WM_ICON | perl -0777 -pe '@_=/\d+/g; printf \"P7\\nWIDTH %d\\nHEIGHT %d\\nDEPTH 4\\nMAXVAL 255\\nTUPLTYPE RGB_ALPHA\\nENDHDR\\n\", splice@_,0,2; $_=pack \"N*\", @_; s/(.)(...)/$2$1/gs' | convert - -geometry \"{icon_size}\" {icon_fmt}:-"
+INFO_FILE_URL = 'urlDownload'
 
 url = helpers.get_info(INFO_FILE_URL)
 if url == False:
@@ -29,25 +33,49 @@ url = url.replace('download', 'live', 1)
 display = helpers.get_env("DISPLAY")
 xauthority = helpers.get_env("XAUTHORITY")
 
-last_icon, last_window  = None, None
+last_window_id, last_window, t0, t1, stop  = None, None, 0, 0, False
 
-for i in range(0, duration):
+if VERBOSE: print("starting live overview")
+for i in range(0, max_duration):
     env = {'DISPLAY': display, 'XAUTHORITY': xauthority}
     success, window_id = helpers.run('xdotool getactivewindow', env = env)
     if success:
         _, window = helpers.run('xdotool getactivewindow getwindowname', env = env)
-        _, icon = helpers.run(icon_cmd.format(
-            window_id = window_id,
-            icon_size = icon_size,
-            icon_fmt = icon_fmt
-        ), env = env, encoding = None)
+        if window_id != last_window_id:
+            _, icon = helpers.run(icon_cmd.format(
+                window_id = window_id,
+                icon_size = icon_size,
+                icon_fmt = icon_fmt
+            ), env = env, encoding = None)
+        else:
+            icon = None
     else:
         window, icon = '', ''
 
     _, img = helpers.run(screenshot_cmd.format(width = width), env = env, encoding = None)
-    data = {'window': window} if last_window != window else {}
-    files = {'img': img, 'icon': icon} if last_icon != icon else {'img': img}
-    last_icon, last_window = icon, window
-    
-    r = requests.post(url, files = files, data = data)
+    data, files = {}, {'img': img}
+    if last_window != window: data['window'] = window
+    if icon != None: files['icon'] = icon
+    last_window, last_window_id = window, window_id
+
+    if VERBOSE: print("hitting {0} width data {1} and files {2}".format(url, data, files.keys()))
+    response = requests.post(url, files = files, data = data).json(object_hook=lambda d: SimpleNamespace(**d))
+
+    if hasattr(response, 'interval'): interval = response.interval
+    if hasattr(response, 'width'): width = response.width
+
+    if hasattr(response, 'stop'):
+        if stop == False:
+            t0, t1 = time.perf_counter(), 0
+        else:
+            t1 = time.perf_counter() - t0
+        stop = response.stop
+    else:
+        stop, t1 = False, 0
+
+    if VERBOSE: print("width:{0}, interval:{1}, stop:{2}, elasped:{3}, response:{4}".format(width, interval, stop, t1, response))
+    if stop and t1 > stop_after:
+        if VERBOSE: print("stopping live overview")
+        exit()
+
     time.sleep(interval)
