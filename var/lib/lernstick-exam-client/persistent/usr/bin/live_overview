@@ -23,7 +23,7 @@ icon_cmd = "xprop -id {window_id} -notype 32c _NET_WM_ICON | perl -0777 -pe '@_=
 INFO_FILE_URL = 'urlDownload'
 
 url = helpers.get_info(INFO_FILE_URL)
-if url == False:
+if url == None:
     print('Variable "${variable}" not found in {file}.'.format(
         variable = INFO_FILE_URL,
         file = '/info'

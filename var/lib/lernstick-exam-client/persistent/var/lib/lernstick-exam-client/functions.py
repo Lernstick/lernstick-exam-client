@@ -23,14 +23,14 @@ def get_config (variable, default = None, file = '/config.json'):
 # Return a variable from the info file.
 # @param string variable variable to get
 # @param string file the info file
-# @return string|False the variable or False if not found
+# @return string|None the variable or None if not found
 ##
 def get_info (variable, file = '/info'):
     cmd = 'set -a; source "{file}"; set +a; printf "%s" "${variable}"'.format(
         file = file,
         variable = variable)
     string = subprocess.check_output(['bash', '-c', cmd]).decode(sys.stdout.encoding)
-    return string if string != "" else False
+    return string if string != "" else None
 
 ##
 # Return an environment variable from a currently running process.
@@ -47,7 +47,7 @@ def get_env (variable):
                     return value
                 print("{} = {}".format(var, val))
             except: pass
-    return False
+    return None
 
 ##
 # Runs a command an returns its output as well as its return value
