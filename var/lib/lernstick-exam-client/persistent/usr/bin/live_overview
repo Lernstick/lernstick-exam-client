@@ -5,6 +5,7 @@ import time # time.sleep()
 import requests # requests.get()
 from types import SimpleNamespace # json to python object
 
+# append to the interpreter’s search path for modules
 directory = "/var/lib/lernstick-exam-client/"
 sys.path.append(directory)
 import functions as helpers # get_info(), get_env(), run()

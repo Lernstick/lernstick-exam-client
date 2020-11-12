@@ -1,0 +1,62 @@
+#!/usr/bin/env python3
+
+import os # os.makedirs(), os.chmod()
+import stat # stat.ST_MODE
+import sys # sys.path.append()
+import time # time.sleep()
+import datetime # datetime.now(), datetime.strftime()
+
+# append to the interpreter’s search path for modules
+directory = "/var/lib/lernstick-exam-client/"
+sys.path.append(directory)
+import functions as helpers # get_config(), get_env(), run()
+
+VERBOSE = True
+screenshots_path = "/home/user/.Screenshots" # maybe a configurable value sometime?
+screenshots_interval = helpers.get_config("screenshots_interval", 1)*60 # in seconds
+
+# highly optimized screenshot command to stdout
+screenshot_cmd = 'sudo -u user import -silent -window root jpg:- | convert - \
+  -filter Triangle \
+  -define filter:support=2 \
+  -unsharp 0.25x0.08+8.3+0.045 \
+  -dither None \
+  -posterize 136 \
+  -quality 62 \
+  -define jpeg:fancy-upsampling=off \
+  -define png:compression-filter=5 \
+  -define png:compression-level=9 \
+  -define png:compression-strategy=1 \
+  -define png:exclude-chunk=all \
+  -interlace none \
+  -colorspace sRGB \
+  jpg:-'
+env = {'DISPLAY': helpers.get_env("DISPLAY"), 'XAUTHORITY': helpers.get_env("XAUTHORITY")}
+date_format = "%Y-%m-%d %H.%M.%S" # example "2020-02-25 14.06.03"
+dir_mode = oct(0o600) # 0o makes the number octal
+
+try: os.makedirs(screenshots_path)    
+except: pass
+
+try: os.chmod(screenshots_path, dir_mode)
+except: pass
+
+try:
+    mode = oct(os.stat(screenshots_path).st_mode & 0o777)
+    if mode != dir_mode:
+        print('Mode of path "{0}" cannot be changed to {1}.'.format(screenshots_path, dir_mode))
+        exit(1)
+except:
+    print('Directory "{0}" cannot be created.'.format(screenshots_path))
+    exit(1)    
+
+while True:
+    _, img = helpers.run(screenshot_cmd, env = env, encoding = None)
+    date = datetime.datetime.now().strftime(date_format)
+    path = "{screenshots_path}/screenshot {date}.jpg".format(screenshots_path = screenshots_path, date = date)
+    with open(path, 'wb') as screenshot:
+        if VERBOSE: print('Screenshot saved in {path}'.format(path = path))
+        screenshot.write(img)
+
+    if VERBOSE: print('Sleeping {0:0.2f} seconds ...'.format(screenshots_interval))
+    time.sleep(screenshots_interval)

@@ -1,6 +1,23 @@
-import sys # sys.stdout.encoding
+import sys # sys.stdout.encoding, sys.stdin
 import glob # glob.glob()
 import subprocess # subprocess.check_output(), subprocess.call()
+import json # json.load
+
+##
+# Return a exam config item
+# @param string variable variable to get
+# @param mixed the default value if the config value is not set
+# @param string file the config file
+# @return mixed the variable or the value of default if not found
+##
+def get_config (variable, default = None, file = '/config.json'):
+    with open(file) as json_file:
+        data = json.load(json_file)
+        try:
+            value = data["config"][variable]
+        except:
+            value = default
+    return value
 
 ##
 # Return a variable from the info file.
@@ -50,3 +67,4 @@ def run (cmd, env = {}, encoding = 'utf-8'):
     ret = True if process.returncode == 0 else False
     output = output if encoding == None else output.decode(encoding).strip()
     return ret, output
+
