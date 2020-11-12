@@ -11,7 +11,7 @@ from types import SimpleNamespace # json to python object
 CONFIG_FILE = '/etc/lernstick-exam-client/agent.json'
 INFO_FILE = '/info'
 INFO_FILE_URL = 'actionConfig'
-DEBUG = True
+DEBUG = False
 VERBOSE = True
 retry = 5000
 
