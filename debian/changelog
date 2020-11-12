@@ -3,7 +3,7 @@ lernstick-exam-client (1.0.11) lernstick-9; urgency=medium
   * [cb81bf] version 1.0.11
   * [80b63d] added dependency wxgtk
 
- -- root <root@debian>  Thu, 12 Nov 2020 08:38:00 +0100
+ -- Roman Gruber <roman.gruber@inf.unibe.ch>  Thu, 12 Nov 2020 08:38:00 +0100
 
 lernstick-exam-client (1.0.10) lernstick-9; urgency=medium
 
