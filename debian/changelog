@@ -1,6 +1,5 @@
 lernstick-exam-client (1.0.12) lernstick-9; urgency=medium
 
-  [ chaoos ]
   * [111341] movement of many script to the client
   * [9e0b05] show_info.html added
   * [2e7861] added keylogger, screen_capture, show_info, live_overview
@@ -10,52 +9,46 @@ lernstick-exam-client (1.0.12) lernstick-9; urgency=medium
   * [c5d447] corrected wrong path
   * [70f19d] service files added for screen_capture and keylogger
   * [42ac98] fixed agent service file
-
-  [ root ]
   * [ec7c7c] version_check added
   * [9a8663] lernstick version_check added
   * [7fdcc6] tiny mistake
   * [b438c7] max_brightness script added
   * [dc8407] execute permissions on max_brightness
-
-  [ chaoos ]
   * [17b590] live_overview with import instead of ffmpeg
   * [8c1975] execute events from command line
   * [348e03] Update lernstick-exam-agent
   * [841b2e] iterations, not seconds
-
-  [ root ]
   * [dfce62] finally a replacement for firefox found
   * [8fab1c] added wxbrowser
   * [c15b19] firefox replaced
   * [0f5066] customize wxbrowser
   * [fbe42f] exit when keymap cannot be determined
   * [3e989e] added icon in live_overview
-
-  [ chaoos ]
   * [1ca93c] icon format added
   * [29a2cb] pyhton helpers file
   * [1ade4d] live_overview in python
   * [642ed3] only send window name and icon, when they have changed
   * [62c24d] stay active as long as someone is on a monitor view, else stop
   * [01ba70] take the version from filesystem.squashfs, and local file as backup
-  * [8e9407] version check looking at grub config string to distinguish exam/non-exa
+  * [8e9407] version check looking at grub config string to distinguish exam/non-exam
 
-  [ root ]
+ -- root <root@debian>  Thu, 12 Nov 2020 08:56:21 +0100
 
- -- Roman Gruber <roman.gruber@inf.unibe.ch>  Wed, 11 Nov 2020 18:26:54 +0100
+lernstick-exam-client (1.0.11) lernstick-9; urgency=medium
+
+  * [cb81bf] version 1.0.11
+  * [80b63d] added dependency wxgtk
+
+ -- Roman Gruber <roman.gruber@inf.unibe.ch>  Thu, 12 Nov 2020 08:38:00 +0100
 
 lernstick-exam-client (1.0.10) lernstick-9; urgency=medium
 
-  [ chaoos ]
   * [e7d416] Update README.Debian
   * [d4bbdd] SIGINT after 4 seconds, SIGKILL after 8 seconds for firefox profile creation
   * [85e683] New dependency logkeys
   * [fe8833] Daemon needs screen installed on the exam client
 
-  [ root ]
-
- -- Roman Gruber <roman.gruber@inf.unibe.ch>  Thu, 09 Jul 2020 13:56:24 +0200
+ -- Roman Gruber <roman.gruber@inf.unibe.ch>  Thu, 09 Jul 2020 13:54:00 +0200 
 
 lernstick-exam-client (1.0.9) lernstick-9; urgency=medium
 
