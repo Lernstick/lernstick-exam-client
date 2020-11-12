@@ -33,7 +33,7 @@ screenshot_cmd = 'sudo -u user import -silent -window root jpg:- | convert - \
   jpg:-'
 env = {'DISPLAY': helpers.get_env("DISPLAY"), 'XAUTHORITY': helpers.get_env("XAUTHORITY")}
 date_format = "%Y-%m-%d %H.%M.%S" # example "2020-02-25 14.06.03"
-dir_mode = 0o600 # 0o makes the number octal
+dir_mode = 0o700 # 0o makes the number octal
 
 try: os.makedirs(screenshots_path)    
 except: pass
