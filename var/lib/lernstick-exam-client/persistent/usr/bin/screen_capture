@@ -20,20 +20,23 @@ path="${c:-"/home/user/ScreenCapture"}"
 command="$(config_value "screen_capture_command")"
 output="${path}/video.m3u8"
 
-# get DISPLAY and XAUTHORITY env vars
-set -o allexport
-. <(strings /proc/*/environ 2>/dev/null | awk -F= '$1=="DISPLAY"||$1=="XAUTHORITY"' | head -2) 
-set +o allexport
+while true; do
+  # get DISPLAY and XAUTHORITY env vars
+  set -o allexport
+  . <(strings /proc/*/environ 2>/dev/null | awk -F= '$1=="DISPLAY"||$1=="XAUTHORITY"' | head -2) 
+  set +o allexport
 
-resolution="$(xdpyinfo | awk '$1=="dimensions:"{print $2}')"
-gop="$(bc <<< "${chunk}*${fps}")"
-mkdir -p "${path}"
-cd "${path}"
-date="$(date +%s)"
-master="master${date}.m3u8"
-playlist="video${date}.m3u8"
+  resolution="$(xdpyinfo | awk '$1=="dimensions:"{print $2}')"
+  gop="$(bc <<< "${chunk}*${fps}")"
+  mkdir -p "${path}"
+  cd "${path}"
+  date="$(date +%s)"
+  master="master${date}.m3u8"
+  playlist="video${date}.m3u8"
 
-echo "[screen_capture] [info] Starting screen capturing..."
-echo "[screen_capture] [info] calling ${command}"
-eval "${command}"
+  echo "[screen_capture] [info] Starting screen capturing..."
+  echo "[screen_capture] [info] calling ${command}"
+  eval "${command}"
+  sleep 10 # retry after 10 seconds
+done
 
