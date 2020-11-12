@@ -33,7 +33,7 @@ screenshot_cmd = 'sudo -u user import -silent -window root jpg:- | convert - \
   jpg:-'
 env = {'DISPLAY': helpers.get_env("DISPLAY"), 'XAUTHORITY': helpers.get_env("XAUTHORITY")}
 date_format = "%Y-%m-%d %H.%M.%S" # example "2020-02-25 14.06.03"
-dir_mode = oct(0o600) # 0o makes the number octal
+dir_mode = 0o600 # 0o makes the number octal
 
 try: os.makedirs(screenshots_path)    
 except: pass
@@ -42,9 +42,9 @@ try: os.chmod(screenshots_path, dir_mode)
 except: pass
 
 try:
-    mode = oct(os.stat(screenshots_path).st_mode & 0o777)
+    mode = os.stat(screenshots_path).st_mode & 0o777
     if mode != dir_mode:
-        print('Mode of path "{0}" cannot be changed to {1}.'.format(screenshots_path, dir_mode))
+        print('Mode {0} of path "{1}" cannot be changed to {2}.'.format(screenshots_path, oct(mode), oct(dir_mode)))
         exit(1)
 except:
     print('Directory "{0}" cannot be created.'.format(screenshots_path))
