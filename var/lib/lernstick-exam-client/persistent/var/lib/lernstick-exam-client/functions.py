@@ -16,7 +16,7 @@ def get_info (variable, file = '/info'):
     return string if string != "" else False
 
 ##
-# Return aN environment variable from a currently running process.
+# Return an environment variable from a currently running process.
 # @param string variable environment variable to retrieve
 # @return string|False the variable or False if not found
 ##
