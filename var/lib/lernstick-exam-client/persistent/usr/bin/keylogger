@@ -1,60 +1,72 @@
-#!/bin/bash
+#!/usr/bin/env python3
 
-. /var/lib/lernstick-exam-client/functions.sh
+import sys # sys.path.append()
+import os # os.path.isfile(), os.access(), os.R_OK, os.makedirs()
+import subprocess # subprocess.Popen(), subprocess.PIPE, subprocess.STDOUT
+import time # time.time()
 
-c="$(config_value "keylogger_keymap")"
-keymap="${c:-"en_US"}"
+# append to the interpreter’s search path for modules
+directory = "/var/lib/lernstick-exam-client/"
+sys.path.append(directory)
+import functions as helpers # get_config(), get_env(), run()
 
-c="$(config_value "keylogger_path")"
-path="${c:-"/home/user/ScreenCapture"}"
+VERBOSE = True
+DEBUG = False
+keymap = helpers.get_config("keylogger_keymap", "en_US")
+path = helpers.get_config("keylogger_path", "/home/user/.Keylogger")
+chunk = 10 # seconds
+dir_mode = 0o700 # 0o makes the number octal
+date = int(time.time()) # seconds timestamp
 
-chunk="10" # in seconds
-while true; do
-  # find the keymap file from the currently running Xorg process
-  if [ "${keymap}" = "auto" ]; then
-    pid="$(pgrep Xorg)"
-    [ "$?" = 1 ] && exit 1 # exit the script when the keymap cannot be determined
-    export $(strings /proc/${pid}/environ | grep -P "^LANG=" | head -1)
-    keymap="${LANG%%.*}"
-  fi
+def to_file (line, path = path):
+    global date
+    ms = int(round(time.time() * 1000)) # timestamp in microseconds
+    now = int(time.time()) # timestamp in seconds
+    expire = date + chunk
+    if now > expire: date = now
+    if DEBUG: print("{ms} {line}".format(ms = ms, line = line))
+    with open("{0}/keylogger{1}.key".format(path, date), "a") as file:
+        file.write("{ms} {line}\n".format(ms = ms, line = line))
 
-  # fall back if keymap does not exist
-  if [ ! -r "/usr/share/logkeys/keymaps/${keymap}.map" ]; then
-    keymap="--us-keymap" # default keymap
-  else
-    keymap="--keymap /usr/share/logkeys/keymaps/${keymap}.map"
-  fi
-  mkdir -p "${path}"
-  cd "${path}"
+# find the keymap file from the currently running Xorg process
+if keymap == "auto":
+    retval, pid = helpers.run("pgrep Xorg")
+    if retval:
+        lang = helpers.get_env("LANG", pid)
+        keymap = lang.split(".", 1)[0] # "en_US.UTF-8" to "en_US"
+    else:
+        exit(1) # fail if the keymap cannot be determined
 
-  logkeys --start --no-daemon --no-timestamps $keymap -o - | while read -n1 char; do
+# fall back if keymap does not exist
+file = "/usr/share/logkeys/keymaps/{0}.map".format(keymap)
+if os.path.isfile(file) and os.access(file, os.R_OK):
+    arg = "--keymap {0}".format(file)
+else:
+    arg = "--us-keymap" # default keymap
+    
+try: os.makedirs(path) and os.chmod(path, dir_mode)
+except: pass
+
+p = subprocess.Popen("logkeys --start --no-daemon --no-timestamps {0} -o -".format(arg),
+    stdout = subprocess.PIPE,
+    stderr = subprocess.STDOUT,
+    shell = True)
+
+concat, string = False, ""
+while True:
+    char = p.stdout.read(1)
+    if not char: exit(1)
+    char = char.decode('utf-8')
+    if char == "\n": continue
     # outputs enclosed in square brackets like <enter> should be on one line
-    if [ "$char" = "<" ]; then
-        concat="yes"
-    fi
+    if char == "<": concat = True
 
-    if [ "${concat-no}" = "yes" ]; then
-        string="${string}${char}"
-    elif [ "${concat-no}" = "no" ]; then
-        echo "${string}${char}"
-        string=""
-    fi
+    if concat:
+        string += char
+    else:
+        to_file(char)
 
-    if [ "$char" = ">" ]; then
-        concat="no"
-        echo "${string}"
-        string=""
-    fi
-  done | while IFS= read -r line; do
-    # add correct millisecondtimestamp to the line and store it in the file named by the timestamp
-    date="${date-$(date +%s)}"
-    now="$(date +%s)"
-    expire=$(expr $date + $chunk)
-
-    if [ "$now" -gt "$expire" ]; then
-        date="${now}"
-    fi
-    echo "$(date +%s%3N) $line" >> "${path}/keylogger${date}.key"
-  done
-  sleep 10 # retry after 10 seconds
-done
+    if char == ">":
+        concat = False
+        to_file(string)
+        string = ""
