@@ -22,4 +22,3 @@ function config_value()
     echo "$v"
   fi
 }
-

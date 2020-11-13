@@ -3,6 +3,8 @@ Description=max_brightness
 
 [Service]
 ExecStart=/usr/bin/max_brightness
+Restart=on-failure
+RestartSec=5s
 
 [Install]
 WantedBy=multi-user.target

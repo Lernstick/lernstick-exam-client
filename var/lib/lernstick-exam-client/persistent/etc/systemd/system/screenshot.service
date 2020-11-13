@@ -5,9 +5,8 @@ Description=screenshot
 Type=simple
 ExecStart=/usr/bin/screenshot
 ExecStop=/bin/bash -c 'kill $1; tail --pid=$1 -f /dev/null' sh $MAINPID
-Restart=always
-RestartSec=10
+Restart=on-failure
+RestartSec=5s
 
 [Install]
 WantedBy=graphical.target
-
