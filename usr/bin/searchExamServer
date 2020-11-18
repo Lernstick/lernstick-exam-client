@@ -348,8 +348,12 @@ lernstick_version="$(grep -ohP '[0-9,\-]{8,}' /run/live/rootfs/filesystem.squash
 if [ -r "/run/live/medium/boot/grub/themes/lernstick/theme.txt" ]; then
   lernstick_flavor="$(grep -qP "title-text.*Prüfung" /run/live/medium/boot/grub/themes/lernstick/theme.txt 2>/dev/null && echo exam || echo standard)"
 else
-  lernstick_flavor="exam" # fallback to exam if the file does not exist
-fi
+  # fallback to exam if the file does not exist
+  if [ -e "/usr/bin/lernstick_backup" ]; then
+    lernstick_flavor="exam"
+  else
+    lernstick_flavor="standard"
+  fi
 
 wants_server_version="$(cat "$compatFile" | ${python} -c 'import sys, json; print json.load(sys.stdin)["wants_server_version"]')"
 jsonInfo="$(${wget} ${wgetOptions} -qO- "${actionInfo}")"
