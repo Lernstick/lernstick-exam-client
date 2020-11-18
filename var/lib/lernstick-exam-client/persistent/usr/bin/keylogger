@@ -50,13 +50,13 @@ except: pass
 p = subprocess.Popen("logkeys --start --no-daemon --no-timestamps {0} -o -".format(arg),
     stdout = subprocess.PIPE,
     stderr = subprocess.STDOUT,
+    encoding = 'utf-8',
     shell = True)
 
 concat, string = False, ""
 while True:
     char = p.stdout.read(1)
     if not char: exit(1)
-    char = char.decode('utf-8')
     if char == "\n": continue
     # outputs enclosed in square brackets like <enter> should be on one line
     if char == "<": concat = True
