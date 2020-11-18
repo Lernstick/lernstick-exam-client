@@ -354,6 +354,7 @@ else
   else
     lernstick_flavor="standard"
   fi
+fi
 
 wants_server_version="$(cat "$compatFile" | ${python} -c 'import sys, json; print json.load(sys.stdin)["wants_server_version"]')"
 jsonInfo="$(${wget} ${wgetOptions} -qO- "${actionInfo}")"
