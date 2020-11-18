@@ -1,38 +1,23 @@
 lernstick-exam-client (1.0.12) lernstick-9; urgency=medium
 
-  * [111341] movement of many script to the client
-  * [9e0b05] show_info.html added
-  * [2e7861] added keylogger, screen_capture, show_info, live_overview
-  * [0d6efc] fixed functions.sh
-  * [f12855] command needs to be evaluated
-  * [33d86a] added agent
-  * [c5d447] corrected wrong path
-  * [70f19d] service files added for screen_capture and keylogger
-  * [42ac98] fixed agent service file
-  * [ec7c7c] version_check added
-  * [9a8663] lernstick version_check added
-  * [7fdcc6] tiny mistake
-  * [b438c7] max_brightness script added
-  * [dc8407] execute permissions on max_brightness
-  * [17b590] live_overview with import instead of ffmpeg
-  * [8c1975] execute events from command line
-  * [348e03] Update lernstick-exam-agent
-  * [841b2e] iterations, not seconds
-  * [dfce62] finally a replacement for firefox found
-  * [8fab1c] added wxbrowser
-  * [c15b19] firefox replaced
-  * [0f5066] customize wxbrowser
-  * [fbe42f] exit when keymap cannot be determined
-  * [3e989e] added icon in live_overview
-  * [1ca93c] icon format added
-  * [29a2cb] pyhton helpers file
-  * [1ade4d] live_overview in python
-  * [642ed3] only send window name and icon, when they have changed
-  * [62c24d] stay active as long as someone is on a monitor view, else stop
-  * [01ba70] take the version from filesystem.squashfs, and local file as backup
-  * [8e9407] version check looking at grub config string to distinguish exam/non-exam
+  * [aabf1c] Update README.Debian
+  * [36675c] Update compatibility.json
+  * [ea556c] Update functions.py
+  * [8b5680] Update functions.py
+  * [87e1f9] added screenshot service
+  * [ecbdaa] correct chmod for screenshot
+  * [30f949] chmod fixed
+  * [eadb28] mode 700 is needed that glados can read the files
+  * [230baf] Update lernstick-exam-agent
+  * [a11d78] the service should retry after 10 seconds
+  * [65f47a]  the service should retry after 10 seconds
+  * [346945] Update keylogger
+  * [cdd905] get_env and get_info return None in case of failure
+  * [8f80d6] refactored keylogger in python
+  * [fc0a8b] pipefail and set -e in screen_capture
+  * [a3f18d] get_env with pid
 
- -- root <root@debian>  Thu, 12 Nov 2020 08:56:21 +0100
+ -- Roman Gruber <roman.gruber@inf.unibe.ch>  Wed, 18 Nov 2020 11:13:31 +0100
 
 lernstick-exam-client (1.0.11) lernstick-9; urgency=medium
 
