@@ -367,9 +367,12 @@ if [ ${retval} -eq 0 ]; then
   wants_lernstick_version="$(echo "$jsonInfo" | ${python} -c 'import sys, json; print json.load(sys.stdin)["wants_lernstick_version"]')"
   wants_lernstick_flavor="$(echo "$jsonInfo" | ${python} -c 'import sys, json; print json.load(sys.stdin)["wants_lernstick_flavor"]')"
   >&2 echo "client_version = $client_version"
+  >&2 echo "lernstick_version = $lernstick_version"
+  >&2 echo "lernstick_flavor = $lernstick_flavor"
   >&2 echo "wants_server_version = $wants_server_version"
-  >&2 echo "server_version = $server_version"
   >&2 echo "wants_client_version = $wants_client_version"
+  >&2 echo "wants_lernstick_flavor = $wants_lernstick_flavor"
+    
   if ! check_version "$server_version" "$wants_server_version"; then
     >&2 echo "Server version mismatch. Got ${server_version}, but client needs ${wants_server_version}."
     ${zenity} --error --width=300 --title "$(gettext "Version Error")" --text "$(eval_gettext "Server version mismatch. Got \${server_version}, but client needs \${wants_server_version}.")"
