@@ -1,0 +1,27 @@
+#!/usr/bin/env python3
+
+import sys # sys.path.append()
+
+# append to the interpreter’s search path for modules
+directory = "/var/lib/lernstick-exam-client/"
+sys.path.append(directory)
+import functions as helpers # get_env(), run()
+
+INFO_FILE_URL = 'urlDownload'
+
+display = helpers.get_env("DISPLAY")
+xauthority = helpers.get_env("XAUTHORITY")
+env = {'DISPLAY': display, 'XAUTHORITY': xauthority}
+
+url = helpers.get_info(INFO_FILE_URL)
+if url == None:
+    print('Variable "${variable}" not found in {file}.'.format(
+        variable = INFO_FILE_URL,
+        file = '/info'
+    ))
+    exit(1)
+
+
+url = url.replace('ticket/download', 'result/view', 1)
+
+helpers.run('/usr/bin/wxbrowser --fullscreen -n "Lock" -i "/usr/share/icons/oxygen/base/128x128/actions/system-search.png" {url}'.format(url = url), env = env)
