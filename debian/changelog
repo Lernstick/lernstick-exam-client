@@ -1,3 +1,10 @@
+lernstick-exam-client (1.0.15) lernstick-9; urgency=medium
+
+  [ chaoos ]
+  * [9c27f0] the next (and probably not the last) stupid fix for the bootup!
+
+ -- Roman Gruber <roman.gruber@inf.unibe.ch>  Thu, 28 Jan 2021 19:53:53 +0100
+
 lernstick-exam-client (1.0.14) lernstick-9; urgency=medium
 
   * [5c7c14] cleanup the initramfs
