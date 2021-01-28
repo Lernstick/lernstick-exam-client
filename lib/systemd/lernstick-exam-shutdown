@@ -110,7 +110,7 @@ if [ -f "/restore" ]; then
   mount -o move /sys /newroot/sys
   unmount_loop /oldroot
   mount -o move /proc /newroot/proc
-  rm -rf /newroot/run/initramfs/*
+  rm -rf /newroot/run/initramfs/restore
 
   # finally change the root directory and continue bootup
   exec chroot /newroot /sbin/init
