@@ -1,3 +1,18 @@
+lernstick-exam-client (1.0.13) lernstick-9; urgency=medium
+
+  [ chaoos ]
+  * [33d633] better check for lernstick_flavor
+  * [2d0193] Update searchExamServer
+  * [a86e8a] popen encoding fix
+  * [beb0bb] Update searchExamServer
+  * [1a12d4] lock and unlock commands added to the agent config
+  * [15f86a] first proof of concept for a lock_screen command
+  * [975beb] mount.sh script moved to client, mounting external devices fixed
+  * [a10425] displacement of shutdown script
+  * [1104fb] deviation rename
+
+ -- Roman Gruber <roman.gruber@inf.unibe.ch>  Thu, 28 Jan 2021 14:48:06 +0100
+
 lernstick-exam-client (1.0.12) lernstick-9; urgency=medium
 
   * [aabf1c] Update README.Debian
