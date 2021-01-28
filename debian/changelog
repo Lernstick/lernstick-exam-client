@@ -1,3 +1,9 @@
+lernstick-exam-client (1.0.14) lernstick-9; urgency=medium
+
+  * [5c7c14] cleanup the initramfs
+
+ -- Roman Gruber <roman.gruber@inf.unibe.ch>  Thu, 28 Jan 2021 15:16:12 +0100
+
 lernstick-exam-client (1.0.13) lernstick-9; urgency=medium
 
   [ chaoos ]
