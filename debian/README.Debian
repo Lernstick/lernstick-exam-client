@@ -9,6 +9,8 @@ Update changelog:
 
 Commit the changes (with the changed changelog) to master and tag a new release, such that in the tag, the changelog contains all changes of that release
 
+Update the compatibility.json file with the new version.
+
 Build the package with:
 
  dpkg-buildpackage -sa -us -uc
