@@ -1,0 +1,70 @@
+#!/usr/bin/env python3
+
+import wx
+import wx.adv
+
+TRAY_TOOLTIP = 'Name' 
+TRAY_ICON = '/home/user/icon.png' 
+TICK_INTERVAL = 60 # in seconds
+
+def create_menu_item(menu, label, func):
+    item = wx.MenuItem(menu, -1, label)
+    menu.Bind(wx.EVT_MENU, func, id=item.GetId())
+    menu.Append(item)
+    return item
+
+
+class TaskBarIcon(wx.adv.TaskBarIcon):
+    def __init__(self, frame):
+        self.frame = frame
+        super(TaskBarIcon, self).__init__()
+        self.SetIcon(wx.Icon(TRAY_ICON), TRAY_TOOLTIP)
+        self.Bind(wx.adv.EVT_TASKBAR_RIGHT_DOWN, self.onRightClick)
+        self.Bind(wx.adv.EVT_TASKBAR_LEFT_DOWN, self.onClick)
+
+        self.timer = wx.Timer(self)
+        self.Bind(wx.EVT_TIMER, self.onTimer, self.timer)        
+        self.timer.Start(TICK_INTERVAL*1000) # start timer after a delay of 1min
+
+    def CreatePopupMenu(self):
+        menu = wx.Menu()
+        create_menu_item(menu, 'Site', self.hello)
+        menu.AppendSeparator()
+        create_menu_item(menu, 'Exit', self.exit)
+        return menu
+
+    def onTimer(self, event):
+        print ('Timer ticked.')
+        notification = wx.adv.NotificationMessage('info',
+            message="message",
+            flags=wx.ICON_INFORMATION) # ICON_WARNING, ICON_ERROR
+        if notification.Show(timeout=10) == False:
+            print("fallback notification")
+        
+    def onClick(self, event):
+        print ('Tray icon was clicked.')
+        self.PopupMenu(self.CreatePopupMenu())
+
+    def onRightClick(self, event):
+        print ('Tray icon was right-clicked.')
+        wx.adv.NotificationMessage('info', message="Timer ticked", flags=wx.ICON_INFORMATION).Show(timeout=10)
+
+    def hello(self, event):
+        print ('Hello, world!')
+        wx.adv.NotificationMessage('error', message="message", flags=wx.ICON_ERROR).Show(timeout=10)
+
+    def exit(self, event):
+        wx.CallAfter(self.Destroy)
+        self.frame.Close()
+
+class App(wx.App):
+    def OnInit(self):
+        frame = wx.Frame(None)
+        self.SetTopWindow(frame)
+        TaskBarIcon(frame)
+        return True
+
+
+if __name__ == '__main__':
+    app = App(False)
+    app.MainLoop()
