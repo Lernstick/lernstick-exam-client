@@ -1,11 +1,52 @@
 #!/usr/bin/env python3
 
-import wx
-import wx.adv
+import wx # wx.App, wx.Frame, wx.Menu, wx.MenuItem, wx.Timer, wx.Icon
+import wx.adv # wx.adv.TaskBarIcon, wx.adv.NotificationMessage
+import signal # signal.signal(), signal.SIGUSR1
+import sys # sys.path
+import time # time.time()
+import collections # collections.deque()
+from datetime import datetime # datetime.strptime(), datetime.utcfromtimestamp()
+import requests # requests.get()
+
+# append to the interpreter’s search path for modules
+directory = "/var/lib/lernstick-exam-client/"
+sys.path.append(directory)
+import functions as helpers # get_config(), get_info(), run()
 
 TRAY_TOOLTIP = 'Name' 
-TRAY_ICON = '/home/user/icon.png' 
+TRAY_ICON_OK = '/home/user/ok.png' 
+TRAY_ICON_ERROR = '/home/user/error.png' 
 TICK_INTERVAL = 60 # in seconds
+NOTIFY_URL = 'actionNotify'
+SIGNAL_FILE = '/tmp/lernstick-exam-tray'
+DEBUG = True
+
+# timestamp in milliseconds
+def timestamp_ms():
+    return round(time.time() * 1000)
+
+def sigusr1_handler(signal, frame):
+    #print(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3])
+    print ("SIGUSR1 caught")
+    try: f = open(SIGNAL_FILE, 'r') 
+    except OSError: app.tray.onSignal(0, -2, 'no signal file')
+    with f:
+        try: timestamp, code, msg = list(f)[-1].split(':', 2)
+        except ValueError: timestamp, code, msg = 0, -1, list(f)[-1]
+        app.tray.onSignal(int(timestamp), int(code), msg.strip())
+
+def get_last_successful_backup():
+    try: f = open(SIGNAL_FILE, 'r') 
+    except OSError: return 0
+    with f:
+        for line in reversed(f.readlines()):
+            try: timestamp, code, msg = line.split(':', 2)
+            except ValueError: timestamp, code, msg = 0, -1, line
+            if int(code) == TaskBarIcon.BACKUP_SUCCESSFUL:
+                return int(timestamp)
+    return 0
+
 
 def create_menu_item(menu, label, func):
     item = wx.MenuItem(menu, -1, label)
@@ -13,45 +54,164 @@ def create_menu_item(menu, label, func):
     menu.Append(item)
     return item
 
-
 class TaskBarIcon(wx.adv.TaskBarIcon):
+
+    BACKUP_STARTED = 0
+    BACKUP_STOPPED = 1
+    BACKUP_FAILED = 2
+    BACKUP_SUCCESSFUL = 3
+    AGENT_NOT_RUNNING = 4
+    SERVER_UNREACHABLE = 5
+    SERVER_REACHABLE = 6
+
     def __init__(self, frame):
         self.frame = frame
+        self.last_successful_backup = get_last_successful_backup()
+        self.started = timestamp_ms()
+        self.exam_started = datetime.strptime(helpers.run("last --time-format iso user | head -n1 | awk '{print $4}'")[1], '%Y-%m-%dT%H:%M:%S%z').timestamp()*1000 # in ms
+        self.last_online = self.exam_started
+        self.backup_interval = helpers.get_config('backup_interval', 300)*1000 # in ms
+        self.backup_tolerace = self.backup_interval + 60*1000 # + 1min
+        self.token = helpers.get_info('token')
+        self.ping_url = helpers.get_info(NOTIFY_URL)
+        self.ping_url = self.ping_url.format(token = self.token, state = 'Ping recieved')
+
+        self.state = {
+            'BACKUP_OK':  True,
+            'NETWORK_OK': True,
+        }
+
+        self.log = collections.deque([], 10) # queue of max 10 items
         super(TaskBarIcon, self).__init__()
-        self.SetIcon(wx.Icon(TRAY_ICON), TRAY_TOOLTIP)
         self.Bind(wx.adv.EVT_TASKBAR_RIGHT_DOWN, self.onRightClick)
         self.Bind(wx.adv.EVT_TASKBAR_LEFT_DOWN, self.onClick)
 
         self.timer = wx.Timer(self)
-        self.Bind(wx.EVT_TIMER, self.onTimer, self.timer)        
+        self.Bind(wx.EVT_TIMER, self.onIntervalTimer, self.timer)
+        self.onIntervalTimer(wx.EVT_TIMER)
         self.timer.Start(TICK_INTERVAL*1000) # start timer after a delay of 1min
+
+        self.signal_timer = wx.Timer(self)
+        self.Bind(wx.EVT_TIMER, self.onSignalTimer, self.signal_timer)
+        self.signal_timer.Start(100) # every 0.1 second
 
     def CreatePopupMenu(self):
         menu = wx.Menu()
-        create_menu_item(menu, 'Site', self.hello)
+
+        item = create_menu_item(menu, 'Status:', self.noop)
+        item.Enable(False)
+
+        if self.state['NETWORK_OK']:
+            item = create_menu_item(menu, '✔️ The system is online (last checked {0} minutes ago).'.format(int((timestamp_ms() - self.last_online)/60000)), self.noop)
+        else:
+            item = create_menu_item(menu, '❌ The system is not online (last time was {0} minutes ago).'.format(int((timestamp_ms() - self.last_online)/60000)), self.noop)
+        item.Enable(False)
+
+        lsb = get_last_successful_backup()
+        sign = '✔️' if self.state['BACKUP_OK'] else '❌'
+        if lsb == 0:
+            item = create_menu_item(menu, '{0} There was no backup since the system started.'.format(sign), self.noop)
+        else:
+            item = create_menu_item(menu, '{0} The last successfull backup was at {1:%H:%M:%S} ({2} minutes ago).'.format(sign, datetime.utcfromtimestamp(int(lsb/1000)), int((timestamp_ms() - lsb)/60000)), self.noop)
+        item.Enable(False)
+
         menu.AppendSeparator()
-        create_menu_item(menu, 'Exit', self.exit)
+
+        item = create_menu_item(menu, 'History:', self.noop)
+        item.Enable(False)
+
+        for n in self.log:
+            msg = '● {0:%H:%M:%S} - {1}: {2}'.format(datetime.utcfromtimestamp(int(n['timestamp']/1000)), n['type'].capitalize(), n['message'])
+            item = create_menu_item(menu, msg, self.noop)
+            item.Enable(False)
+
+        menu.AppendSeparator()
+        create_menu_item(menu, 'Update status now', self.onClickUpdate)
         return menu
 
-    def onTimer(self, event):
-        print ('Timer ticked.')
-        notification = wx.adv.NotificationMessage('info',
-            message="message",
-            flags=wx.ICON_INFORMATION) # ICON_WARNING, ICON_ERROR
-        if notification.Show(timeout=10) == False:
-            print("fallback notification")
-        
+    def onClickUpdate(self, event):
+        if self.onIntervalTimer(event):
+            self.systemNotification('info', 'Manual check: Everything seems fine.')
+
+    def onIntervalTimer(self, event):
+        if DEBUG: print("DEBUG> interval timer ticked")
+        ret = self.notifyBackup() and self.notifyNetwork()
+        self.updateIcon()
+        return ret
+
+    def onSignalTimer(self, event):
+        return
+
+    def noop(self, event):
+        return
+
+    def onSignal(self, timestamp, code, msg):
+        if DEBUG:
+            print("DEBUG> msg:", msg)
+            print("DEBUG> code:", code)
+            print("DEBUG> timestamp:", timestamp)
+
+        if code == self.BACKUP_STARTED:
+            print("bstarted")
+        elif code == self.BACKUP_STOPPED:
+            print("bstopped")
+        elif code == self.BACKUP_FAILED:
+            self.systemNotification('error', 'The current backup has failed. Please contact your supervisor.')
+        elif code == self.BACKUP_SUCCESSFUL:
+            self.last_successful_backup = timestamp_ms()
+            self.state['BACKUP_OK'] = True
+            self.log.appendleft({'timestamp': self.last_successful_backup, 'type': 'info', 'message': 'Backup successfull', 'obj': None})
+        self.updateIcon()
+
+    def systemNotification(self, severity, message):
+        # ICON_WARNING, ICON_ERROR, ICON_INFORMATION
+        icon = wx.ICON_ERROR if severity == 'error' else wx.ICON_INFORMATION
+        title = 'Error' if severity == 'error' else 'Info'
+        notification = wx.adv.NotificationMessage(title,
+            message = message,
+            flags = icon)
+        self.log.appendleft({'timestamp': timestamp_ms(), 'type': severity, 'message': message, 'obj': notification})
+        if notification.Show(timeout = 10) == False:
+            print("TODO: fallback notification")        
+
     def onClick(self, event):
         print ('Tray icon was clicked.')
         self.PopupMenu(self.CreatePopupMenu())
 
     def onRightClick(self, event):
         print ('Tray icon was right-clicked.')
-        wx.adv.NotificationMessage('info', message="Timer ticked", flags=wx.ICON_INFORMATION).Show(timeout=10)
 
-    def hello(self, event):
-        print ('Hello, world!')
-        wx.adv.NotificationMessage('error', message="message", flags=wx.ICON_ERROR).Show(timeout=10)
+    def notifyBackup(self):
+        if self.last_successful_backup == 0 and abs(timestamp_ms() - self.exam_started) > self.backup_tolerace:
+            self.systemNotification('error', 'There was no backup since the system has started. Please contact your supervisor.')
+            self.state['BACKUP_OK'] = False
+            return False
+        elif abs(timestamp_ms() - self.last_successful_backup) > self.backup_tolerace:
+            self.systemNotification('error', 'There was no backup since {0} minutes. Please contact your supervisor.'.format(int((timestamp_ms() - self.last_successful_backup)/60000)))
+            self.state['BACKUP_OK'] = False
+            return False
+        return True
+
+    def notifyNetwork(self):
+        r = requests.get(self.ping_url)
+        if r.status_code == 200:
+            self.last_online = timestamp_ms()
+            self.state['NETWORK_OK'] = True
+            return True
+        else:
+            self.systemNotification('error', 'The GLaDOS-server is not reachable. Please contact your supervisor.')
+            self.state['NETWORK_OK'] = False
+            return False
+
+    def isError(self):
+        return not all(self.state.values())
+
+    def updateIcon(self):
+        icon = TRAY_ICON_ERROR if self.isError() else TRAY_ICON_OK
+        self.SetIcon(wx.Icon(icon), TRAY_TOOLTIP)
+
+    def notifyAgent(self):
+        return False
 
     def exit(self, event):
         wx.CallAfter(self.Destroy)
@@ -61,10 +221,12 @@ class App(wx.App):
     def OnInit(self):
         frame = wx.Frame(None)
         self.SetTopWindow(frame)
-        TaskBarIcon(frame)
+        self.tray = TaskBarIcon(frame)
         return True
 
 
 if __name__ == '__main__':
     app = App(False)
+    signal.signal(signal.SIGUSR1,sigusr1_handler)
     app.MainLoop()
+
