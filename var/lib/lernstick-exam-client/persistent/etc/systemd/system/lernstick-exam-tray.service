@@ -1,0 +1,17 @@
+[Unit]
+Description=lernstick-exam-tray
+
+[Service]
+Type=simple
+User=user
+Group=user
+Environment="DISPLAY=:0"
+Environment="XAUTHORITY=/run/user/1000/gdm/Xauthority"
+Environment="DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus"
+ExecStart=/usr/bin/lernstick-exam-tray
+ExecStop=/bin/bash -c 'kill $1; tail --pid=$1 -f /dev/null' sh $MAINPID
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=graphical.target
