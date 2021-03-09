@@ -4,6 +4,7 @@ import wx # wx.App, wx.Frame, wx.Menu, wx.MenuItem, wx.Timer, wx.Icon
 import wx.adv # wx.adv.TaskBarIcon, wx.adv.NotificationMessage
 import signal # signal.signal(), signal.SIGUSR1
 import sys # sys.path
+import os # os.environ
 import time # time.time()
 import collections # collections.deque()
 from datetime import datetime # datetime.strptime(), datetime.utcfromtimestamp()
@@ -12,15 +13,20 @@ import requests # requests.get()
 # append to the interpreter’s search path for modules
 directory = "/var/lib/lernstick-exam-client/"
 sys.path.append(directory)
-import functions as helpers # get_config(), get_info(), run()
+import functions as helpers # get_config(), get_info(), get_env(), run()
 
-TRAY_TOOLTIP = 'Name' 
-TRAY_ICON_OK = '/home/user/ok.png' 
-TRAY_ICON_ERROR = '/home/user/error.png' 
+TRAY_TOOLTIP = 'lernstick-exam-tray'
+TRAY_ICON_OK = '/var/lib/lernstick-exam-client/ok.png'
+TRAY_ICON_ERROR = '/var/lib/lernstick-exam-client/error.png'
 TICK_INTERVAL = 60 # in seconds
 NOTIFY_URL = 'actionNotify'
 SIGNAL_FILE = '/tmp/lernstick-exam-tray'
 DEBUG = True
+
+# set the environment variables
+if not ('DISPLAY' in os.environ and 'XAUTHORITY' in os.environ and 'DBUS_SESSION_BUS_ADDRESS' in os.environ):
+    print('DISPLAY, XAUTHORITY and DBUS_SESSION_BUS_ADDRESS have to be available.')
+    exit(1)
 
 # timestamp in milliseconds
 def timestamp_ms():
@@ -56,13 +62,12 @@ def create_menu_item(menu, label, func):
 
 class TaskBarIcon(wx.adv.TaskBarIcon):
 
-    BACKUP_STARTED = 0
-    BACKUP_STOPPED = 1
+    BACKUP_STARTED = 1
     BACKUP_FAILED = 2
     BACKUP_SUCCESSFUL = 3
-    AGENT_NOT_RUNNING = 4
-    SERVER_UNREACHABLE = 5
-    SERVER_REACHABLE = 6
+    RESTORE_STARTED = 4
+    RESTORE_FAILED = 5
+    RESTORE_SUCCESSFUL = 6
 
     def __init__(self, frame):
         self.frame = frame
@@ -78,7 +83,7 @@ class TaskBarIcon(wx.adv.TaskBarIcon):
 
         self.state = {
             'BACKUP_OK':  True,
-            'NETWORK_OK': True,
+            'NETWORK_OK': False,
         }
 
         self.log = collections.deque([], 10) # queue of max 10 items
@@ -110,7 +115,7 @@ class TaskBarIcon(wx.adv.TaskBarIcon):
         lsb = get_last_successful_backup()
         sign = '✔️' if self.state['BACKUP_OK'] else '❌'
         if lsb == 0:
-            item = create_menu_item(menu, '{0} There was no backup since the system started.'.format(sign), self.noop)
+            item = create_menu_item(menu, '{0} There was no backup since the system has started ({1} minutes ago).'.format(sign, int((timestamp_ms() - self.exam_started)/60000)), self.noop)
         else:
             item = create_menu_item(menu, '{0} The last successfull backup was at {1:%H:%M:%S} ({2} minutes ago).'.format(sign, datetime.utcfromtimestamp(int(lsb/1000)), int((timestamp_ms() - lsb)/60000)), self.noop)
         item.Enable(False)
@@ -135,9 +140,10 @@ class TaskBarIcon(wx.adv.TaskBarIcon):
 
     def onIntervalTimer(self, event):
         if DEBUG: print("DEBUG> interval timer ticked")
-        ret = self.notifyBackup() and self.notifyNetwork()
+        network = self.notifyNetwork()
+        backup = self.notifyBackup()
         self.updateIcon()
-        return ret
+        return network and backup
 
     def onSignalTimer(self, event):
         return
@@ -147,20 +153,21 @@ class TaskBarIcon(wx.adv.TaskBarIcon):
 
     def onSignal(self, timestamp, code, msg):
         if DEBUG:
-            print("DEBUG> msg:", msg)
             print("DEBUG> code:", code)
             print("DEBUG> timestamp:", timestamp)
+            print("DEBUG> msg:", msg)
 
-        if code == self.BACKUP_STARTED:
-            print("bstarted")
-        elif code == self.BACKUP_STOPPED:
-            print("bstopped")
-        elif code == self.BACKUP_FAILED:
+        if code == self.BACKUP_FAILED:
             self.systemNotification('error', 'The current backup has failed. Please contact your supervisor.')
+            self.state['BACKUP_OK'] = False
         elif code == self.BACKUP_SUCCESSFUL:
             self.last_successful_backup = timestamp_ms()
             self.state['BACKUP_OK'] = True
             self.log.appendleft({'timestamp': self.last_successful_backup, 'type': 'info', 'message': 'Backup successfull', 'obj': None})
+        elif code == self.RESTORE_FAILED:
+            self.systemNotification('error', 'A manual restore has failed. Please contact your supervisor.')
+        elif code == self.RESTORE_SUCCESSFUL:
+            self.systemNotification('info', 'Manual restore successfull.')
         self.updateIcon()
 
     def systemNotification(self, severity, message):
@@ -172,7 +179,7 @@ class TaskBarIcon(wx.adv.TaskBarIcon):
             flags = icon)
         self.log.appendleft({'timestamp': timestamp_ms(), 'type': severity, 'message': message, 'obj': notification})
         if notification.Show(timeout = 10) == False:
-            print("TODO: fallback notification")        
+            print("TODO: fallback notification")
 
     def onClick(self, event):
         print ('Tray icon was clicked.')
@@ -229,4 +236,5 @@ if __name__ == '__main__':
     app = App(False)
     signal.signal(signal.SIGUSR1,sigusr1_handler)
     app.MainLoop()
+
 

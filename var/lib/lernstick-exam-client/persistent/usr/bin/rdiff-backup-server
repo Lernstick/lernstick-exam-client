@@ -1,0 +1,29 @@
+#!/bin/bash
+
+type="${1:-backup}"
+
+if [ "${type}" = "backup" ]; then
+    code_started=1
+    code_failed=2
+    code_success=3
+elif [ "${type}" = "restore" ]; then
+    code_started=4
+    code_failed=5
+    code_success=6
+fi
+
+# send SIGUSR1
+echo "$(date +%s%3N):${code_started}:${type} started" >> /tmp/lernstick-exam-tray
+pkill --signal SIGUSR1 -f lernstick-exam-tray
+
+# the actual rdiff-backup command to open the pipe
+rdiff-backup --server
+
+# send SIGUSR2
+if [ $? -eq 0 ]; then 
+    echo "$(date +%s%3N):${code_success}:${type} successful" >> /tmp/lernstick-exam-tray
+else
+    echo "$(date +%s%3N):${code_failed}:${type} failed" >> /tmp/lernstick-exam-tray
+fi 
+pkill --signal SIGUSR1 -f lernstick-exam-tray
+
