@@ -120,7 +120,7 @@ else:
 
     while True:
         if VERBOSE: print('Getting URL {0:s}.'.format(url))
-        r = requests.get(url, stream=True, timeout=10)
+        r = requests.get(url, stream=True, timeout=(20, 20)) # timeout=(connect, read)
         if DEBUG: print('DEBUG> status code {code:d}'.format(code = r.status_code))
         if VERBOSE and r.status_code == 409: print('Conflict: The ressource is exclusively locked, trying again later.')
         if VERBOSE and r.status_code == 200: print('Stream successfully started.')
