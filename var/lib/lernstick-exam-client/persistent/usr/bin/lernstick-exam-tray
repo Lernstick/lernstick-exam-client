@@ -7,7 +7,7 @@ import sys # sys.path
 import os # os.environ
 import time # time.time()
 import collections # collections.deque()
-from datetime import datetime # datetime.strptime(), datetime.utcfromtimestamp()
+from datetime import datetime # datetime.strptime(), datetime.fromtimestamp()
 import requests # requests.get()
 
 # append to the interpreter’s search path for modules
@@ -33,7 +33,6 @@ def timestamp_ms():
     return round(time.time() * 1000)
 
 def sigusr1_handler(signal, frame):
-    #print(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3])
     print ("SIGUSR1 caught")
     try: f = open(SIGNAL_FILE, 'r') 
     except OSError: app.tray.onSignal(0, -2, 'no signal file')
@@ -117,7 +116,7 @@ class TaskBarIcon(wx.adv.TaskBarIcon):
         if lsb == 0:
             item = create_menu_item(menu, '{0} There was no backup since the system has started ({1} minutes ago).'.format(sign, int((timestamp_ms() - self.exam_started)/60000)), self.noop)
         else:
-            item = create_menu_item(menu, '{0} The last successfull backup was at {1:%H:%M:%S} ({2} minutes ago).'.format(sign, datetime.utcfromtimestamp(int(lsb/1000)), int((timestamp_ms() - lsb)/60000)), self.noop)
+            item = create_menu_item(menu, '{0} The last successfull backup was at {1:%H:%M:%S} ({2} minutes ago).'.format(sign, datetime.fromtimestamp(int(lsb/1000)), int((timestamp_ms() - lsb)/60000)), self.noop)
         item.Enable(False)
 
         menu.AppendSeparator()
@@ -126,7 +125,7 @@ class TaskBarIcon(wx.adv.TaskBarIcon):
         item.Enable(False)
 
         for n in self.log:
-            msg = '● {0:%H:%M:%S} - {1}: {2}'.format(datetime.utcfromtimestamp(int(n['timestamp']/1000)), n['type'].capitalize(), n['message'])
+            msg = '● {0:%H:%M:%S} - {1}: {2}'.format(datetime.fromtimestamp(int(n['timestamp']/1000)), n['type'].capitalize(), n['message'])
             item = create_menu_item(menu, msg, self.noop)
             item.Enable(False)
 
