@@ -60,7 +60,10 @@ for i in range(0, max_duration):
     last_window, last_window_id = window, window_id
 
     if VERBOSE: print("hitting {0} width data {1} and files {2}".format(url, data, files.keys()))
-    response = requests.post(url, files = files, data = data).json(object_hook=lambda d: SimpleNamespace(**d))
+    try: response = requests.post(url, files = files, data = data, timeout=10).json(object_hook=lambda d: SimpleNamespace(**d))
+    except:
+        time.sleep(5) # wait for 5 seconds
+        continue
 
     if hasattr(response, 'interval'): interval = response.interval
     if hasattr(response, 'width'): width = response.width
