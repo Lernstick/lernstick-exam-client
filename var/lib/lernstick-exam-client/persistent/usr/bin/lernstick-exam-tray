@@ -200,7 +200,12 @@ class TaskBarIcon(wx.adv.TaskBarIcon):
         return True
 
     def notifyNetwork(self):
-        r = requests.get(self.ping_url, timeout=10)
+        try: r = requests.get(self.ping_url, timeout=10)
+        except:
+            self.systemNotification('error', 'The network connection could not be established')
+            self.state['NETWORK_OK'] = False
+            return False
+
         if r.status_code == 200:
             self.last_online = timestamp_ms()
             self.state['NETWORK_OK'] = True
