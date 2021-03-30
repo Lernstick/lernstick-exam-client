@@ -18,6 +18,7 @@ import functions as helpers # get_config(), get_info(), get_env(), run()
 TRAY_TOOLTIP = 'lernstick-exam-tray'
 TRAY_ICON_OK = '/var/lib/lernstick-exam-client/ok.png'
 TRAY_ICON_ERROR = '/var/lib/lernstick-exam-client/error.png'
+TRAY_ICON_WAIT = '/var/lib/lernstick-exam-client/wait.png'
 TICK_INTERVAL = 60 # in seconds
 NOTIFY_URL = 'actionNotify'
 SIGNAL_FILE = '/tmp/lernstick-exam-tray'
@@ -81,7 +82,7 @@ class TaskBarIcon(wx.adv.TaskBarIcon):
         self.ping_url = self.ping_url.format(token = self.token, state = 'Ping recieved')
 
         self.state = {
-            'BACKUP_OK':  True,
+            'BACKUP_OK':  True, # because the check sets it to False only
             'NETWORK_OK': False,
         }
 
@@ -92,7 +93,8 @@ class TaskBarIcon(wx.adv.TaskBarIcon):
 
         self.timer = wx.Timer(self)
         self.Bind(wx.EVT_TIMER, self.onIntervalTimer, self.timer)
-        self.onIntervalTimer(wx.EVT_TIMER)
+        self.SetIcon(wx.Icon(TRAY_ICON_WAIT), TRAY_TOOLTIP) # set the wait icon
+        #self.onIntervalTimer(wx.EVT_TIMER) # run all checks at startup
         self.timer.Start(TICK_INTERVAL*1000) # start timer after a delay of 1min
 
         self.signal_timer = wx.Timer(self)
