@@ -1,3 +1,37 @@
+lernstick-exam-client (1.0.17) lernstick-9; urgency=medium
+
+  * [e9733f] Update README.Debian
+  * [1c7407] Create lernstick-exam-tray
+  * [5f5238] first working version of tray icon
+  * [9c24e3] service file for the system tray icon
+  * [baf783] added error and ok icons
+  * [642332] rdiff-backup --server wrapper
+  * [a30b2b] addded timeout to get request
+  * [742806] timeout added to get request
+  * [531b9f] more timeouts
+  * [03e5b7] execute permisison on the tray icon
+  * [3e020e] exception in requests.get()
+  * [67c1a1] correct timestamps
+  * [8c8bf1] timeout in request and exception handling
+  * [e9733f] Update README.Debian
+  * [1c7407] Create lernstick-exam-tray
+  * [5f5238] first working version of tray icon
+  * [9c24e3] service file for the system tray icon
+  * [baf783] added error and ok icons
+  * [642332] rdiff-backup --server wrapper
+  * [a30b2b] addded timeout to get request
+  * [742806] timeout added to get request
+  * [531b9f] more timeouts
+  * [03e5b7] execute permisison on the tray icon
+  * [3e020e] exception in requests.get()
+  * [67c1a1] correct timestamps
+  * [8c8bf1] timeout in request and exception handling
+  * [14232c] finishExam gives more information on error
+  * [e2bf64] start delay of 10 seconds
+  * [ecbf98] wait icon until the check run for the first time
+
+ -- Roman Gruber <roman.gruber@inf.unibe.ch>  Tue, 30 Mar 2021 13:30:45 +0200
+
 lernstick-exam-client (1.0.16) lernstick-9; urgency=medium
 
   * [e5d0b7] the next fucking boot fix
