@@ -101,6 +101,17 @@ if [ -f "/restore" ]; then
   touch /init
   touch /newroot/init
 
+  # These move and umount commands make sure that udisks2.service starts
+  # and recognizes external and internal disks. Else udisks2 only sees
+  # the devices when restarted. Mounting, unmounting, getting info, ...
+  # everything is affected by the problems.
+  mount -o move /dev /newroot/dev
+  mount -o move /run /newroot/run
+  mount -o move /sys /newroot/sys
+  unmount_loop /oldroot
+  mount -o move /proc /newroot/proc
+  rm -rf /newroot/run/initramfs/restore
+
   # Removes (silently) the Broadcom PCI wireless LAN driver. This chip is
   # found inside certain MacBrook Pro systems. Removing the driver here,
   # forces the system to reload the module during the 2nd (warm) bootup.
@@ -121,21 +132,10 @@ if [ -f "/restore" ]; then
   # [   97.868712] ieee80211 phy0: brcmf_fil_cmd_data: bus is down. we have nothing to do.
   # [   97.868716] ieee80211 phy0: brcmf_notify_escan_complete: Scan abort failed
   # Interestingly only in certain exam environments (not the native one) are
-  # affected by this. This is a workaround, the actual problem is not known.
-  # The idea came from this thread:
+  # affected by this. It must be executed within the chroot. This is a workaround,
+  # the actual problem is not known. The idea came from this thread:
   # https://bbs.archlinux.org/viewtopic.php?id=242382
-  modprobe -q -r brcmfmac
-
-  # These move and umount commands make sure that udisks2.service starts
-  # and recognizes external and internal disks. Else udisks2 only sees
-  # the devices when restarted. Mounting, unmounting, getting info, ...
-  # everything is affected by the problems.
-  mount -o move /dev /newroot/dev
-  mount -o move /run /newroot/run
-  mount -o move /sys /newroot/sys
-  unmount_loop /oldroot
-  mount -o move /proc /newroot/proc
-  rm -rf /newroot/run/initramfs/restore
+  chroot /newroot modprobe -q -r brcmfmac
 
   # finally change the root directory and continue bootup
   exec chroot /newroot /sbin/init
