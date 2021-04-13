@@ -101,10 +101,35 @@ if [ -f "/restore" ]; then
   touch /init
   touch /newroot/init
 
-  # these move and umount commands make sure that udisks2.service starts
+  # Removes (silently) the Broadcom PCI wireless LAN driver. This chip is
+  # found inside certain MacBrook Pro systems. Removing the driver here,
+  # forces the system to reload the module during the 2nd (warm) bootup.
+  # If this line is not present, the driver will fail to recognize the
+  # wifi device, culminating in this dmesg log:
+  # [   92.091134] usbcore: registered new interface driver brcmfmac
+  # [   92.201027] brcmfmac: brcmf_fw_alloc_request: using brcm/brcmfmac43602-pcie for chip BCM43602/2
+  # [   92.206809] brcmfmac 0000:02:00.0: firmware: direct-loading firmware brcm/brcmfmac43602-pcie.bin
+  # [   92.206844] brcmfmac 0000:02:00.0: firmware: direct-loading firmware brcm/brcmfmac43602-pcie.Apple Inc.-MacBookPro13,2.txt
+  # [   92.483631] brcmfmac: brcmf_fw_alloc_request: using brcm/brcmfmac43602-pcie for chip BCM43602/2
+  # [   92.483794] brcmfmac 0000:02:00.0: firmware: failed to load brcm/brcmfmac43602-pcie.clm_blob (-2)
+  # [   92.483811] brcmfmac: brcmf_c_process_clm_blob: no clm_blob available (err=-2), device may have limited channels available
+  # [   92.484512] brcmfmac: brcmf_c_preinit_dcmds: Firmware: BCM43602/2 wl0: Nov 10 2015 06:38:10 version 7.35.177.61 (r598657) FWID 01-ea662a8c
+  # [   92.525705] brcmfmac 0000:02:00.0 wlp2s0: renamed from wlan0
+  # [   97.278573] usbcore: deregistering interface driver brcmfmac
+  # [   97.304782] ieee80211 phy0: brcmf_fil_cmd_data: bus is down. we have nothing to do.
+  # [   97.304787] ieee80211 phy0: brcmf_cfg80211_get_tx_power: error (-5)
+  # [   97.868712] ieee80211 phy0: brcmf_fil_cmd_data: bus is down. we have nothing to do.
+  # [   97.868716] ieee80211 phy0: brcmf_notify_escan_complete: Scan abort failed
+  # Interestingly only in certain exam environments (not the native one) are
+  # affected by this. This is a workaround, the actual problem is not known.
+  # The idea came from this thread:
+  # https://bbs.archlinux.org/viewtopic.php?id=242382
+  modprobe -q -r brcmfmac
+
+  # These move and umount commands make sure that udisks2.service starts
   # and recognizes external and internal disks. Else udisks2 only sees
   # the devices when restarted. Mounting, unmounting, getting info, ...
-  # everything is affected by the problems
+  # everything is affected by the problems.
   mount -o move /dev /newroot/dev
   mount -o move /run /newroot/run
   mount -o move /sys /newroot/sys
