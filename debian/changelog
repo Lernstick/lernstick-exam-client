@@ -1,12 +1,3 @@
-lernstick-exam-client (1.0.18) lernstick-9; urgency=medium
-
-  * [0a05a1] modprobe -r must be run within the chroot
-  * [323bb7] update README.Debian
-  * [9958cb] remove start delay for tray
-  * [a32563] workaround to fix brcmfmac device to be recognized after warm reboot
-
- -- Roman Gruber <roman.gruber@inf.unibe.ch>  Tue, 13 Apr 2021 13:05:30 +0200
-
 lernstick-exam-client (1.0.17) lernstick-9; urgency=medium
 
   * [e9733f] Update README.Debian
