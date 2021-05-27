@@ -259,10 +259,10 @@ else
   AVAHI="$(sed "${num}q;d" /tmp/avahi-orig)"
 
   # parse the output
+  gladosProto="$(echo "${AVAHI}" | awk -F";" '{print $5=="_https._tcp" ? "https" : "http";exit}')"
   gladosIp="$(echo "${AVAHI}" | awk -F";" '{print $8;exit}')"
   gladosHost="$(echo "${AVAHI}" | awk -F";" '{print $7;exit}')"
   gladosPort="$(echo "${AVAHI}" | awk -F";" '{print $9;exit}')"
-  gladosProto="$(echo "${AVAHI}" | awk -F";" '{print $5=="_https._tcp" ? "https" : "http";exit}')"
   gladosDesc="$(echo "${AVAHI}" | awk -F";" '{print $4;exit}' | ${python} -u /tmp/convert.py)"
   eth="$(echo "${AVAHI}" | awk -F";" '{print $2;exit}')"
 
@@ -271,6 +271,11 @@ else
   $DEBUG && >&2 echo "gladosPort = $gladosPort"
   $DEBUG && >&2 echo "gladosProto = $gladosProto"
   $DEBUG && >&2 echo "gladosDesc = $gladosDesc"
+
+  # append the hostname and IP of glados to the /etc/hosts file, such that in the exam,
+  # the server IP can be resolved without having a proper DNS service in the network.
+  cp -pv /etc/hosts /var/lib/lernstick-exam-client/persistent/etc/hosts
+  echo "${gladosIp}     ${gladosHost}" >>/var/lib/lernstick-exam-client/persistent/etc/hosts
 fi
 
 if [ -z "$gladosIp" ] || [ -z "$gladosPort" ]; then
@@ -284,7 +289,7 @@ for action in Download Finish Notify SSHKey Md5 Config; do
   if echo "$AVAHI" | grep -qP "action${action}=\'([^\']+)\'"; then
     match="$(echo "$AVAHI" | sed -rn "/action${action}='([^']+)'/s/.*action${action}='([^']+)'.*/\1/p")"
     varname=action${action}
-    declare action${action}="${gladosProto}://${gladosIp}:${gladosPort}/${match}"
+    declare action${action}="${gladosProto}://${gladosHost}:${gladosPort}/${match}"
     $DEBUG && >&2 echo "action${action} = ${!varname}"
   else
     ERROR_MESSAGE="$(gettext "action\${action} not found in txt field.")"
