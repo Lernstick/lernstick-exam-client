@@ -1,4 +1,4 @@
 {
     "client_version": "1.0.18",
-    "wants_server_version": ">=1.0.9"
+    "wants_server_version": ">=1.0.11"
 }

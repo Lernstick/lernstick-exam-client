@@ -1,3 +1,12 @@
+lernstick-exam-client (1.0.18) lernstick-9; urgency=medium
+
+  * [28899f] https support in avahi-browse
+  * [ba70b5] SSL hostname/ip in hosts file added
+  * [6b96fb] ip -> hostname
+  * [02f3b0] ip -> hostname
+
+ -- Roman Gruber <roman.gruber@inf.unibe.ch>  Thu, 27 May 2021 13:08:07 +0200
+
 lernstick-exam-client (1.0.17) lernstick-9; urgency=medium
 
   * [e9733f] Update README.Debian
