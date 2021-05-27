@@ -33,7 +33,7 @@ EOFINNER
 
 fi
 
-url="${gladosProto}://${gladosIp}:${gladosPort}/glados/index.php/howto/welcome-to-exam.md?mode=inline"
+url="${gladosProto}://${gladosHost}:${gladosPort}/glados/index.php/howto/welcome-to-exam.md?mode=inline"
 cat <<EOF >"/tmp/show_info.html"
 <!DOCTYPE html>
 <html lang='en-US'>
