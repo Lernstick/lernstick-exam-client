@@ -81,9 +81,9 @@ function do_exit()
 
   # cleanup firewall whitelist
   if isdeb9ornewer; then
-    diff --unchanged-group-format="" <(echo "^${gladosProto}://${gladosIp}" | sed 's/\./\\\./g') /etc/lernstick-firewall/url_whitelist >/tmp/url_whitelist
+    diff --unchanged-group-format="" <(echo "^${gladosProto}://${gladosHost}" | sed 's/\./\\\./g') /etc/lernstick-firewall/url_whitelist >/tmp/url_whitelist
   else
-    diff --unchanged-group-format="" <(echo "^${gladosProto}://${gladosIp}") /etc/lernstick-firewall/url_whitelist >/tmp/url_whitelist
+    diff --unchanged-group-format="" <(echo "^${gladosProto}://${gladosHost}") /etc/lernstick-firewall/url_whitelist >/tmp/url_whitelist
   fi
   cat /tmp/url_whitelist >/etc/lernstick-firewall/url_whitelist
 
@@ -278,7 +278,7 @@ else
   echo "${gladosIp}     ${gladosHost}" >>/var/lib/lernstick-exam-client/persistent/etc/hosts
 fi
 
-if [ -z "$gladosIp" ] || [ -z "$gladosPort" ]; then
+if [ -z "$gladosHost" ] || [ -z "$gladosPort" ]; then
   $DEBUG && >&2 echo "Glados host not found."
   zenity --error --width=300 --title="$(gettext "Error")" --text="$(gettext "Glados host not found.")"
   do_exit "Glados host not found."
@@ -323,9 +323,9 @@ exec 1> >(${zenity} --progress --pulsate --no-cancel --title="${ZENITY_TITLE}" -
 
 # open ports in the firewall
 if isdeb9ornewer; then
-  echo "^${gladosProto}://${gladosIp}" | sed 's/\./\\\./g'  >>/etc/lernstick-firewall/url_whitelist
+  echo "^${gladosProto}://${gladosHost}" | sed 's/\./\\\./g'  >>/etc/lernstick-firewall/url_whitelist
 else
-  echo "^${gladosProto}://${gladosIp}" >>/etc/lernstick-firewall/url_whitelist
+  echo "^${gladosProto}://${gladosHost}" >>/etc/lernstick-firewall/url_whitelist
 fi
 
 sed -i '$!N; /^\(.*\)\n\1$/!P; D' /etc/lernstick-firewall/url_whitelist
