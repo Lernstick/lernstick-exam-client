@@ -7,4 +7,5 @@ Name=Welcome to the exam
 Name[de]=Willkommen zur Prüfung
 Exec=show_info
 X-GNOME-Autostart-enabled=true
+StartupWMClass=Wxbrowser
 
