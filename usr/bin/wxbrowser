@@ -5,6 +5,7 @@ import wx # wx.App(), wx.Frame()
 import wx.html2 # wx.html2.WebView
 import re # re.comple(), re.match()
 import argparse # argparse.ArgumentParser()
+import os # os.system()
 
 def geometry(arg):
     regex = re.compile(r"^[0-9]+x[0-9]+$")
@@ -61,7 +62,10 @@ class Window(wx.Frame):
             if self.args.center: self.CentreOnScreen()
         elif action == 'close':
             if self.args.verbose: print("closing window")
-            return self.Close()
+            return exit() # exits immediately, self.Close() or self.Destroy() are waiting for an event to process
+        elif action == 'shutdown':
+            if self.args.verbose: print("shutting down")
+            os.system("/sbin/shutdown now -h")
         else:
             if self.args.verbose: print("action {0} not found".format(action))
 
