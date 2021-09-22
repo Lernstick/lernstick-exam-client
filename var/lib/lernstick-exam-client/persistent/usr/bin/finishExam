@@ -4,78 +4,26 @@ wget="/usr/bin/wget"
 wgetOptions="--timeout=10 --tries=3"
 zenity="/usr/bin/zenity"
 zenityOptions="--width=300"
-python="/usr/bin/python"
-backupStateFile="/home/user/shutdown"
 
-export DISPLAY=:0
+. /var/lib/lernstick-exam-client/functions.sh
+
+# get DISPLAY and XAUTHORITY env vars
+set -o allexport
+. <(strings /proc/*/environ 2>/dev/null | awk -F= '$1=="DISPLAY"||$1=="XAUTHORITY"' | head -2)
+set +o allexport
 
 # transmit state to server
 function clientState()
 {
-  echo "$1"
-  ${wget} ${wgetOptions} -qO- "${urlNotify//\{state\}/$1}" 2>&1 >/dev/null
-}
+	  echo "$1"
+	    ${wget} ${wgetOptions} -qO- "${urlNotify//\{state\}/$1}" 2>&1 >/dev/null
+    }
 
-rm -f "${backupStateFile}" >/dev/null 2>&1
-
-# source the info file
-if [ -e /info ]; then
-  source /info
-else
-  ${zenity} ${zenityOptions} --error --title "Error" --text "Error: info file not present."
-  exit
+if [ -z "${urlFinish}" ]; then
+	  ${zenity} ${zenityOptions} --error --title "Error" --text "Error: info file not present."
+	    exit
 fi
-
-if ! ${zenity} ${zenityOptions} --question --title="Finish Exam" --text="Are you sure you want to finish your exam? If you click yes, you will not be able to continue your exam!"; then
-  exit
-fi
-
-exec 1> >(${zenity} ${zenityOptions} --progress --pulsate --no-cancel --title="Finishing exam" --text="Please wait while processing your request." --auto-close)
 
 # initiate the finish process
-json="$(${wget} ${wgetOptions} -qO- "${urlFinish}")"
-retval=$?
-if [ ${retval} -ne 0 ]; then
-  >&2 echo "wget failed while finishing the exam (return value: ${retval})."
-  exec 1>&-; exec 1>&0
-  ${zenity} ${zenityOptions} --error --title "Error" --text "Error: The network connection could not be established (wget return value ${retval})."
-  exit
-fi
+/usr/bin/wxbrowser -c --geometry "800x600" -n "Hand-in exam" -i /usr/share/icons/gnome/256x256/actions/system-log-out.png "${urlFinish}"
 
-# parse json data
-code="$(echo "${json}" | ${python} -c 'import sys, json; print json.load(sys.stdin)["code"]' 2>/dev/null || echo -1)"
-msg="$(echo "${json}" | ${python} -c 'import sys, json; print json.load(sys.stdin)["msg"]' 2>/dev/null || echo 'Error: Json Parse Error')"
-
-if [ "${code}" != "200" ]; then
-  exec 1>&-; exec 1>&0
-  ${zenity} ${zenityOptions} --error --title "Error ${code}" --text "${msg}"
-  exit
-fi
-
-exec 1>&-; exec 1>&0
-
-# At this point, the last backup is initiated on the server. We now have to wait until
-# it's done. The server will write the state of the backup in a file. The state of the 
-# backup as given in the file is printed to the zenity window. As soon as the file
-# contains a single "0", the backup is done and the script is allowed to continue shutting
-# down.
-exec 1> >(${zenity} ${zenityOptions} --progress --pulsate --no-cancel --title="Waiting for server" --text="Waiting for the latest backup to complete. This may take a few minutes..." --auto-close)
-
-clientState "waiting for last backup."
-
-backupState=$(cat "${backupStateFile}" 2>/dev/null)
-until [ "${backupState}" = "0" ]; do
-  [ -n "${backupState}" ] && echo "#${backupState}"
-  sleep 2
-  backupState=$(cat "${backupStateFile}" 2>/dev/null)
-done
-exec 1>&-; exec 1>&0
-
-# Ask the user to shutdown
-timeout=10
-${zenity} ${zenityOptions} --question --title="Shutdown" --timeout=${timeout} --text="The exam was successfully handed in. The system will shutdown in ${timeout} seconds. Press 'Yes' to shutdown now, or 'No' to stop shutting down."
-retval=$?
-if [ ${retval} -eq 0 ] || [ ${retval} -eq 5 ]; then # Yes or timeout
-  clientState "shutting down."
-  /sbin/shutdown -h now
-fi
