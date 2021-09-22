@@ -30,7 +30,7 @@ class Window(wx.Frame):
         self.browser.LoadURL(args.url)
         if self.args.icon: self.SetIcon(wx.Icon(self.args.icon))
         if self.args.fullscreen: self.ShowFullScreen(True)
-        if self.args.geometry is not None: self.SetSize(self.args.geometry)
+        if self.args.geometry is not None: self.resize(self.args.geometry, self.args.center)
         if self.args.center: self.CentreOnScreen()
 
     def onLoaded(self, event):
@@ -54,12 +54,22 @@ class Window(wx.Frame):
             except ValueError: pass
         except ValueError: pass
 
+    def resize(self, geometry, center):
+        width, height = geometry[0], geometry[1]
+        if center:
+            dx, dy = wx.DisplaySize()
+            x = int((dx - width)/2)
+            y = int((dy - height)/2)
+        else:
+            x, y = 0, 0
+        if self.args.verbose: print("resizing window to {0}x{1} ({2}x{3})".format(width, height, x, y))
+        self.SetSize(x, y, width, height)
+
+
     def callAction(self, action, arg):
         if action == 'resize':
             self.args.geometry = geometry(arg)
-            if self.args.verbose: print("resizing window to {0}".format(arg))
-            self.SetSize(self.args.geometry)
-            if self.args.center: self.CentreOnScreen()
+            self.resize(self.args.geometry, self.args.center)
         elif action == 'close':
             if self.args.verbose: print("closing window")
             return exit() # exits immediately, self.Close() or self.Destroy() are waiting for an event to process
