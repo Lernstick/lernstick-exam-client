@@ -23,8 +23,6 @@ class Window(wx.Frame):
         self.browser.Bind(wx.html2.EVT_WEBVIEW_NAVIGATING, self.onClicked) # may be stopped by Veto()
         self.browser.Bind(wx.html2.EVT_WEBVIEW_NAVIGATED, self.onRequested) # may not be stopped
         self.browser.Bind(wx.html2.EVT_WEBVIEW_NEWWINDOW, self.onNewWindow)
-        self.statusbar = self.CreateStatusBar(1)
-        self.statusbar.Hide()
 
     def Load(self):
         self.browser.LoadURL(args.url)
@@ -36,7 +34,17 @@ class Window(wx.Frame):
     def onLoaded(self, event):
         if self.args.verbose: print("loaded", event.URL)
         self.SetTitle(self.browser.GetCurrentTitle())
-        self.statusbar.Hide()
+
+    def resize(self, geometry, center):
+        width, height = geometry[0], geometry[1]
+        if center:
+            dx, dy = wx.DisplaySize()
+            x = int((dx - width)/2)
+            y = int((dy - height)/2)
+            self.SetSize(x, y, width, height)
+        else:
+            self.SetSize(width, height)
+        if self.args.verbose: print("resizing window to {0}x{1})".format(width, height))
 
     def onClicked(self, event):
         if self.args.verbose: print("clicked", event.URL)
@@ -54,18 +62,6 @@ class Window(wx.Frame):
             except ValueError: pass
         except ValueError: pass
 
-    def resize(self, geometry, center):
-        width, height = geometry[0], geometry[1]
-        if center:
-            dx, dy = wx.DisplaySize()
-            x = int((dx - width)/2)
-            y = int((dy - height)/2)
-        else:
-            x, y = 0, 0
-        if self.args.verbose: print("resizing window to {0}x{1} ({2}x{3})".format(width, height, x, y))
-        self.SetSize(x, y, width, height)
-
-
     def callAction(self, action, arg):
         if action == 'resize':
             self.args.geometry = geometry(arg)
@@ -80,9 +76,7 @@ class Window(wx.Frame):
             if self.args.verbose: print("action {0} not found".format(action))
 
     def onRequested(self, event):
-        if self.args.verbose: print("requested", event.URL)
-        self.statusbar.SetStatusText('loading ...')
-        self.statusbar.Show()
+        if self.args.verbose: print("requested", event.URL, event.Target)
 
     def onNewWindow(self, event):
         if self.args.verbose: print("newwindow", event.URL)
