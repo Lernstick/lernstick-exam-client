@@ -3,7 +3,6 @@
 . /var/lib/lernstick-exam-client/functions.sh
 
 url="${gladosProto}://${gladosHost}:${gladosPort}/glados/index.php/howto/welcome-to-exam.md?mode=inline"
-echo $url
 
 /usr/bin/wxbrowser --geometry "850x600"  -c -i /usr/share/icons/gnome/256x256/status/dialog-question.png "${url}"
 
