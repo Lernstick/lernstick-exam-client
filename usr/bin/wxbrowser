@@ -76,7 +76,7 @@ class Window(wx.Frame):
             if self.args.verbose: print("action {0} not found".format(action))
 
     def onRequested(self, event):
-        if self.args.verbose: print("requested", event.URL, event.Target)
+        if self.args.verbose: print("requested", event.URL)
 
     def onNewWindow(self, event):
         if self.args.verbose: print("newwindow", event.URL)
