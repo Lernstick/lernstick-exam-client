@@ -9,6 +9,7 @@ import time # time.time()
 import collections # collections.deque()
 from datetime import datetime # datetime.strptime(), datetime.fromtimestamp()
 import requests # requests.get()
+import subprocess # subprocess.Popen()
 
 # append to the interpreter’s search path for modules
 directory = "/var/lib/lernstick-exam-client/"
@@ -80,6 +81,9 @@ class TaskBarIcon(wx.adv.TaskBarIcon):
         self.token = helpers.get_info('token')
         self.ping_url = helpers.get_info(NOTIFY_URL)
         self.ping_url = self.ping_url.format(token = self.token, state = 'Ping recieved')
+        self.display = helpers.get_env("DISPLAY")
+        self.xauthority = helpers.get_env("XAUTHORITY")
+        self.env = {'DISPLAY': self.display, 'XAUTHORITY': self.xauthority}
 
         self.state = {
             'BACKUP_OK':  True, # because the check sets it to False only
@@ -132,12 +136,26 @@ class TaskBarIcon(wx.adv.TaskBarIcon):
             item.Enable(False)
 
         menu.AppendSeparator()
-        create_menu_item(menu, 'Update status now', self.onClickUpdate)
+        create_menu_item(menu, '🔄 Update status now', self.onClickUpdate)
+        create_menu_item(menu, '❔ Show exam info', self.onClickInfo)
+        create_menu_item(menu, '‼️ Hand-in exam', self.onClickHandIn)
         return menu
 
     def onClickUpdate(self, event):
         if self.onIntervalTimer(event):
             self.systemNotification('info', 'Manual check: Everything seems fine.')
+
+    def onClickInfo(self, event):
+        subprocess.Popen(["show_info"],
+            env = self.env,
+            start_new_session = True
+        )
+
+    def onClickHandIn(self, event):
+        subprocess.Popen(["finishExam"],
+            env = self.env,
+            start_new_session = True
+        )
 
     def onIntervalTimer(self, event):
         if DEBUG: print("DEBUG> interval timer ticked")
