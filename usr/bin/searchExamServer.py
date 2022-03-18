@@ -199,9 +199,10 @@ def clean_exit(reason = None):
     helpers.run('iptables-legacy-save | grep -v "searchExamServer" | iptables-legacy-restore -w')
 
     # remove the glados entries in firewall whitelist
-    line = '^{gladosProto}://{gladosHost}'.format(**glados)
-    line = line.replace(".", "\.") if isDeb9OrNewer() else line
-    remove_line_from_file(urlWhitelistFile, line)
+    if 'glados' in globals() and 'gladosProto' in glados and 'gladosHost' in glados:
+        line = '^{gladosProto}://{gladosHost}'.format(**glados)
+        line = line.replace(".", "\.") if isDeb9OrNewer() else line
+        remove_line_from_file(urlWhitelistFile, line)
 
     helpers.run('umount /run/initramfs/newroot 2>/dev/null')
     helpers.run('umount -l /run/initramfs/{base,exam} 2>/dev/null')
@@ -363,6 +364,8 @@ def zenity_send(p, mesg):
 
 #if LANGUAGE_TRANSLATION: t.messages = {}
 if __name__ == '__main__':
+
+    glados = {}
 
     # Exit if already running
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
