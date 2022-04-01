@@ -29,8 +29,7 @@ import functions as helpers #
 # Constants
 DEBUG = True
 LANGUAGE_TRANSLATION = False # Set to True to translate messages
-envFile = "/etc/lernstick-exam-client-env.conf"
-lockFile = "/run/lock/lernstick-exam-client-search.lock"
+envFile = "/etc/lernstick-exam-client-env.conf" # @todo: why is this here?
 retoreStateFile = "/run/initramfs/restore"
 urlWhitelistFile = "/etc/lernstick-firewall/url_whitelist"
 infoFile = "/run/initramfs/info"
@@ -63,7 +62,7 @@ messages = {
         "Client version mismatch. Got {ver}, but server needs {wants}.": "Clientversionskonflikt: Hat {ver}, aber der Server fordert {wants}.",
         "Setting up token request": "Tokeneingabe wird vorbereitet",
         "Exam Client": "Prüfungsclient",
-        "Taking Glados server from configuration file.": "Nehme Glados Srver von der Konfigurations Datei.",
+        "Taking Glados server from configuration file.": "Nehme Glados Server Informationen von der Konfigurationsdatei.",
         "Continue": "Fortfahren",
         "An exam server was found in the configuration file (via {interface}):\n\n    Desciption: {gladosDesc}\n    Hostname: {gladosHost}\n    IP: {gladosIp}\n\nSwitch to exam mode?": "Ein Prüfungsserver wurde in der Konfigurationdatei gefunden (via {interface}):\n\n    Beschreibung: {gladosDesc}\n    Hostname: {gladosHost}\n    IP: {gladosIp}\n\nIn den Prüfungsmodus wechseln?",
         "Error": "Fehler",
@@ -165,7 +164,6 @@ def isDeb9OrNewer():
 # @param string wants compare ver with this (eg: <=1.2.3)
 def check_version(ver, wants, exit_text = None):
     r = re.search('([\>,\<,\=]+)([0-9,\.]+)', wants)
-    p = lambda v: version.parse(v)
     if r:
         operator = r.group(1)
         ver2 = r.group(2)
@@ -173,8 +171,8 @@ def check_version(ver, wants, exit_text = None):
         operator = '=='
         ver2 = wants
 
-    ver = p(ver)
-    ver2 = p(ver2)
+    ver = version.parse(ver)
+    ver2 = version.parse(ver2)
 
     ret = (
         (operator == '==' and ver == ver2)
@@ -269,13 +267,17 @@ def enqueue_process(process):
 def zenity(**kwargs):
     cmd = 'zenity'
     for key, value in kwargs.items():
+        key = key.replace('_', '-')
         if isinstance(value, bool) and value:
             cmd += f' --{key}'
         elif isinstance(value, int):
             cmd += f' --{key}={value}'
         elif isinstance(value, str):
             cmd += f' --{key}={shlex.quote(value)}'
-    return helpers.run(cmd, env = env)
+        elif isinstance(value, list):
+            for v in value: cmd += f' --{key}={shlex.quote(v)}'
+    if DEBUG: print(f"zenity command: '{cmd}'")
+    return cmd
 
 def exit_with_error_message(mesg, **kwargs):
     if DEBUG: print(mesg, file=sys.stderr)
@@ -286,7 +288,7 @@ def exit_with_error_message(mesg, **kwargs):
         'text': mesg
     }
     kwargs = {**default_args, **kwargs} # merge the args, where the second has priority
-    zenity(**kwargs)
+    helpers.run(zenity(**kwargs), env = env)
     clean_exit(mesg)   
 
 def http_get(url, **kwargs):
@@ -397,9 +399,9 @@ if __name__ == '__main__':
         fixed = True
 
         # starting subprocess
-        cmd = 'zenity --width=300 --progress --pulsate --no-cancel --title="{title}" --text="{text}" --auto-close'.format(
+        cmd = zenity(width = 300, progress = True, pulsate = True, no_cancel = True, auto_close = True,
             title = t('Search'),
-            text = t('Taking Glados server from configuration file.'),
+            text = t('Taking Glados server from configuration file.')
         )
         zenity_process = subprocess.Popen(cmd, env = env, shell = True, stdin = subprocess.PIPE)
 
@@ -435,29 +437,14 @@ if __name__ == '__main__':
         while choice == False:
 
             # show the selection list until the user has chosen one
-            zenity_cmd = ('zenity --list '
-                    + '--title="{title}" '
-                    + '--text="{text}" '
-                    + '--column "#" '
-                    + '--column "{name}" '
-                    + '--column "{ip}" '
-                    + '--column "{host}" '
-                    + '--column "{port}" '
-                    + '--column "{protocol}" '
-                    + '--column "{interface}" '
-                    + '--hide-column=1 '
-                    + '--width=700 '
-                    + '--height=220').format(
+            zenity_cmd = zenity(list = True,
                 title = t('Searching for exam server.'),
                 text = t('The following list of exam servers was found in the network. Please select the one you want to use.'),
-                name = t('Name'),
-                ip = t('IP'),
-                host = t('Host'),
-                port = t('Port'),
-                protocol = t('Protocol'),
-                interface = t('Interface')
+                column = ['#', t('Name'), t('IP'), t('Host'), t('Port'), t('Protocol'), t('Interface')],
+                hide_column = 1,
+                width = 700,
+                height = 220
             )
-
             zenity_process = subprocess.Popen(zenity_cmd,
                 env = env,
                 shell = True,
@@ -549,12 +536,12 @@ if __name__ == '__main__':
         zenity_process.terminate()
 
         # Ask the user to proceed
-        if not zenity(
+        if not helpers.run(zenity(
                 question = True,
                 width = 400,
                 title = t("Continue"),
                 text = t("An exam server was found in the configuration file (via {interface}):\n\n    Desciption: {gladosDesc}\n    Hostname: {gladosHost}\n    IP: {gladosIp}\n\nSwitch to exam mode?", **glados)
-        )[0]:
+        ), env = env)[0]:
             clean_exit("User aborted before switching to exam mode.")
     else:
         zenity_process.stdin.close()
@@ -563,9 +550,9 @@ if __name__ == '__main__':
         avahi_process.terminate()
 
     # starting new zenity subprocess
-    cmd = 'zenity --width=300 --progress --pulsate --no-cancel --title="{title}" --text="{text}" --auto-close'.format(
+    cmd = zenity(width = 300, progress = True, pulsate = True, no_cancel = True, auto_close = True,
         title = t('Please wait'),
-        text = t('Connecting to server.'),
+        text = t('Connecting to server.')
     )
     zenity_process = subprocess.Popen(cmd, env = env, shell = True, stdin = subprocess.PIPE)
 
