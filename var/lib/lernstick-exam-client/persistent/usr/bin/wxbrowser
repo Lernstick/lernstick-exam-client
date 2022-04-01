@@ -25,9 +25,12 @@ class Window(wx.Frame):
         self.browser.Bind(wx.html2.EVT_WEBVIEW_NAVIGATING, self.onClicked) # may be stopped by Veto()
         self.browser.Bind(wx.html2.EVT_WEBVIEW_NAVIGATED, self.onRequested) # may not be stopped
         self.browser.Bind(wx.html2.EVT_WEBVIEW_NEWWINDOW, self.onNewWindow)
+        self.browser.Bind(wx.html2.EVT_WEBVIEW_ERROR, self.onError)
 
     def Load(self):
-        self.browser.LoadURL(args.url)
+        self.tries = 0
+        if self.args.verbose: _print(f"waiting initial delay of {self.args.retry_delays[0]} sec")
+        wx.CallLater(self.args.retry_delays[0]*1000, lambda: self.browser.LoadURL(self.args.url))
         if self.args.icon: self.SetIcon(wx.Icon(self.args.icon))
         if self.args.fullscreen: self.ShowFullScreen(True)
         if self.args.geometry is not None: self.resize(self.args.geometry, self.args.center)
@@ -36,6 +39,20 @@ class Window(wx.Frame):
     def onLoaded(self, event):
         if self.args.verbose: _print("loaded", event.URL)
         self.SetTitle(self.browser.GetCurrentTitle())
+
+    def onError(self, event):
+        if self.args.verbose: _print("error loading{0}".format(f" (retry {self.tries}/{self.args.retries})" if self.tries > 0 else ""), event.URL)
+        self.tries += 1
+        if self.tries <= self.args.retries:
+            wx.CallAfter(lambda: self.retry())
+        else:
+            if self.args.verbose: _print("giving up on", event.URL)
+            self.tries = 0
+
+    def retry(self):
+        delay = self.args.retry_delays[self.tries] if self.tries < len(self.args.retry_delays) else 3
+        if self.args.verbose: _print(f"retrying in {delay} sec")
+        wx.CallLater(delay*1000, lambda: self.browser.LoadURL(self.args.url))
 
     def resize(self, geometry, center):
         width, height = geometry[0], geometry[1]
@@ -90,7 +107,6 @@ class Window(wx.Frame):
         window.Show()
         self.childs.append(window)
 
-
 if __name__ == '__main__':
     # parse the command line arguments
     parser = argparse.ArgumentParser(description="a simple lighweight browser using wxPython")
@@ -100,6 +116,8 @@ if __name__ == '__main__':
     parser.add_argument("--name", "-n", help="the name of the executable to be shown in the dash or taskbar", default=sys.argv[0])
     parser.add_argument("--center", "-c", help="centres the window on screen", action="store_true")
     parser.add_argument("--new-window-geometry", "-ng", help="the width and height in pixels of a new window", type=geometry, metavar='WIDTHxHEIGHT', default='800x600')
+    parser.add_argument("--retries", "-r", help="number of retries on fail", type=int, default=0)
+    parser.add_argument("--retry-delays", "-d", help="delay for each retries in sec (index 0 is for the delay of the initial request), default is 0 3 3 ...", type=int, nargs='+', dest='retry_delays', default=[0])
     arg_group = parser.add_mutually_exclusive_group()
     arg_group.add_argument("--geometry", "-g", help="the width and height in pixels", type=geometry, metavar='WIDTHxHEIGHT')
     arg_group.add_argument("--fullscreen", "-f", help="show the window in fullscreen", action="store_true")
@@ -114,4 +132,3 @@ if __name__ == '__main__':
     window.Load()
     window.Show()
     app.MainLoop()
-
