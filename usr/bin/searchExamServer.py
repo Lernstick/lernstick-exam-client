@@ -209,6 +209,9 @@ def clean_exit(reason = None):
     helpers.run('umount /run/initramfs/newroot 2>/dev/null')
     helpers.run('umount -l /run/initramfs/{base,exam} 2>/dev/null')
 
+    if 'glados' in globals() and 'sshKey' in glados:
+        remove_line_from_file('/root/.ssh/authorized_keys', glados['sshKey'])
+
     if isDeb9OrNewer(): helpers.run('squid -k reconfigure') # iptables stays
 
     if LANGUAGE_TRANSLATION and hasattr(t, 'messages'):
@@ -228,6 +231,7 @@ def file_put_contents(file, contents, append = False):
         return f.write(contents)
 
 def remove_line_from_file(file, line):
+    line = line.strip("\n")
     with open(file, "r") as f: lines = f.readlines()
     with open(file, "w") as f:
         for l in lines:
@@ -387,6 +391,7 @@ def sanitize(d):
 if __name__ == '__main__':
 
     glados = {}
+    glados_shell = {}
 
     # Exit if already running
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -601,6 +606,7 @@ if __name__ == '__main__':
 
     zenity_send(zenity_process, t('Fetching SSH key'))
     glados['sshKey'] = get_ssh_key()
+    glados_shell = sanitize(glados)
 
     client = get_client_version()
 
@@ -636,6 +642,7 @@ if __name__ == '__main__':
     # create environment
     os.makedirs('/root/.ssh', mode = 700, exist_ok = True)
     file_put_contents('/root/.ssh/authorized_keys', glados['sshKey'], append = True)
+    unique_lines('/root/.ssh/authorized_keys')
 
     # The or fixes the newest debian9 version
     _, glados['partitionSystem'] = helpers.run("blkid -l -L system || echo /dev/sr0")
@@ -643,7 +650,7 @@ if __name__ == '__main__':
 
     # write the info file
     contents = ''
-    for variable in variables + ['partitionSystem']:
+    for variable in variables + ['partitionSystem', 'sshKey']:
         contents += '{0}={1}\n'.format(variable, glados_shell[variable])
     file_put_contents(infoFile, contents)
 
