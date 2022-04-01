@@ -43,14 +43,14 @@ class Window(wx.Frame):
     def onError(self, event):
         if self.args.verbose: _print("error loading{0}".format(f" (retry {self.tries}/{self.args.retries})" if self.tries > 0 else ""), event.URL)
         self.tries += 1
-        if self.tries <= self.args.retries:
+        if self.tries <= self.args.retries or self.args.retries == -1:
             wx.CallAfter(lambda: self.retry())
         else:
             if self.args.verbose: _print("giving up on", event.URL)
             self.tries = 0
 
     def retry(self):
-        delay = self.args.retry_delays[self.tries] if self.tries < len(self.args.retry_delays) else 3
+        delay = self.args.retry_delays[self.tries] if self.tries < len(self.args.retry_delays) else self.args.retry_delays[-1]
         if self.args.verbose: _print(f"retrying in {delay} sec")
         wx.CallLater(delay*1000, lambda: self.browser.LoadURL(self.args.url))
 
@@ -116,8 +116,8 @@ if __name__ == '__main__':
     parser.add_argument("--name", "-n", help="the name of the executable to be shown in the dash or taskbar", default=sys.argv[0])
     parser.add_argument("--center", "-c", help="centres the window on screen", action="store_true")
     parser.add_argument("--new-window-geometry", "-ng", help="the width and height in pixels of a new window", type=geometry, metavar='WIDTHxHEIGHT', default='800x600')
-    parser.add_argument("--retries", "-r", help="number of retries on fail", type=int, default=0)
-    parser.add_argument("--retry-delays", "-d", help="delay for each retries in sec (index 0 is for the delay of the initial request), default is 0 3 3 ...", type=int, nargs='+', dest='retry_delays', default=[0])
+    parser.add_argument("--retries", "-r", help="number of retries on fail, (set -1 for infinite retries)", type=int, default=0)
+    parser.add_argument("--retry-delays", "-d", help="delay for each retries in sec (index 0 is for the delay of the initial request), default is 0 3 3 ...", type=int, nargs='+', dest='retry_delays', default=[0, 3])
     arg_group = parser.add_mutually_exclusive_group()
     arg_group.add_argument("--geometry", "-g", help="the width and height in pixels", type=geometry, metavar='WIDTHxHEIGHT')
     arg_group.add_argument("--fullscreen", "-f", help="show the window in fullscreen", action="store_true")
