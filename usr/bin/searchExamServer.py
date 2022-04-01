@@ -19,8 +19,6 @@ import shlex # quote() strings for shell command
 import time # time.sleep()
 import requests # requests.get()
 import http as ht # http.client
-import tkinter as tk
-from tkinter import messagebox
 from requests.adapters import HTTPAdapter, Retry
 
 # append to the interpreter’s search path for modules
