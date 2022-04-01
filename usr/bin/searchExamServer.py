@@ -19,6 +19,8 @@ import shlex # quote() strings for shell command
 import time # time.sleep()
 import requests # requests.get()
 import http as ht # http.client
+import tkinter as tk
+from tkinter import messagebox
 from requests.adapters import HTTPAdapter, Retry
 
 # append to the interpreter’s search path for modules
@@ -58,8 +60,12 @@ messages = {
         "Fetching SSH key": "SSH Schüssel wird abgerufen",
         "Fetching server information": "Server Informationen werden abgerufen",
         "Checking versions": "Versionen werden überprüft",
-        "Server version mismatch. Got {ver}, but client needs {wants}.": "Serverversionskonflikt: Hat {ver}, aber der Client fordert {wants}.",
-        "Client version mismatch. Got {ver}, but server needs {wants}.": "Clientversionskonflikt: Hat {ver}, aber der Server fordert {wants}.",
+        "Server version mismatch. Got {ver}, but client needs {wants}.": "Serverversionskonflikt: Habe {ver}, aber der Client fordert {wants}.",
+        "Client version mismatch. Got {ver}, but server needs {wants}.": "Clientversionskonflikt: Habe {ver}, aber der Server fordert {wants}.",
+        "Lernstick version mismatch. Got {ver}, but server needs {wants}.": "Versionskonflikt des Lernsticks: Habe {ver}, aber der Server fordert {wants}.",
+        "Lernstick flavor mismatch. Got {ver}, but server needs {wants}.": "Versionskonflikt des Lernstick Flavors: Habe {ver}, aber der Server fordert {wants}.",
+        "rdiff-backup version mismatch. Got {ver}, but server needs {wants}. Please update your Lernsticks and/or Glados-server such that they share the same rdiff-backup version; either both 2.x, or both 1.2.x.": "Versionskonflikt von rdiff-backup: Habe {ver}, aber der Server fordert {wants}. Bitte aktualisieren Sie Ihre Lernsticks und/oder Ihren Glados Server, sodass beide die gleiche rdiff-backup Version haben; entweder beide 2.x oder beide 1.2.x.",
+        "The server does not provide information about '{v}'. Therefore, we cannot make sure that everthing will work. Please update your Glados server.": "Der Server gibt keine Information über '{v}' an. Darum kann nicht sichergestellt werden, dass alles reibungslos funktionert. Bitte aktualisieren Sie Ihren Glados Server.",
         "Setting up token request": "Tokeneingabe wird vorbereitet",
         "Exam Client": "Prüfungsclient",
         "Taking Glados server from configuration file.": "Nehme Glados Server Informationen von der Konfigurationsdatei.",
@@ -327,6 +333,13 @@ def get_lernstick_flavor():
     else:
         return 'exam' if os.path.exists(backup) else 'standard'
 
+def get_rdiff_backup_version():
+    retval, output = helpers.run('rdiff-backup --version')
+    v = re.search(r'[\d,\.]+', output)
+    if retval and v: v = v.group(0)
+    else: exit_with_error_message(t("Cannot find rdiff-backup on the system."))
+    return v
+
 # get client information
 def get_client_version():
     try:
@@ -337,6 +350,7 @@ def get_client_version():
 
     client_compat['lernstick_version'] = get_lernstick_version()
     client_compat['lernstick_flavor'] = get_lernstick_flavor()
+    client_compat['rdiff_backup_version'] = get_rdiff_backup_version()
     return client_compat
 
 # get server information
@@ -363,6 +377,13 @@ def unique_lines(file):
 def zenity_send(p, mesg):
     p.stdin.write("#{0}\n".format(mesg).encode('utf-8'))
     p.stdin.flush()
+
+def sanitize(d):
+    r = {}
+    for key in d:
+        r[key] = shlex.quote(d[key]) if isinstance(d[key], str) else d[key]
+    return r
+
 
 #if LANGUAGE_TRANSLATION: t.messages = {}
 if __name__ == '__main__':
@@ -392,6 +413,7 @@ if __name__ == '__main__':
 
     if os.path.isfile(infoFile) and os.access(infoFile, os.R_OK):
         glados = getVariablesFromFile(infoFile)
+        glados_shell = sanitize(glados)
         if DEBUG: print("Using Glados information from previous run (file {0}):\n".format(infoFile), json.dumps(glados, indent = 4))
 
     # if a configfile is used, don't display a selection list and use the config values instead
@@ -407,19 +429,24 @@ if __name__ == '__main__':
 
         if DEBUG: print("Configfile found, using {}.".format(configFile))
 
-        glados = getVariablesFromFile(configFile, glados)
-
+        glados_config = getVariablesFromFile(configFile)
         for var in variables:
-            if not var in glados or glados[var] == '':
+            if not var in glados_config or glados_config[var] == '':
                 exit_with_error_message(t("Variable {var} not given in configuration file {file}. Please add this variable to the configuration file.",
                     var = var,
                     file = configFile
                 ))
+        del glados_config
+
+        glados = getVariablesFromFile(configFile, glados)
+        glados_shell = sanitize(glados)
 
         for action in actions:
             glados[f"action{action}"] = "{gladosProto}://{gladosHost}:{gladosPort}/{0}".format(glados[f"action{action}"], **glados)
 
-        retval, glados['interface'] = helpers.run("ip -s route get {gladosIp} | perl -ne 'print $1 if /dev[\s]+([^\s]+)/'".format(**glados))
+        retval, glados['interface'] = helpers.run("ip -s route get {gladosIp} | perl -ne 'print $1 if /dev[\s]+([^\s]+)/'".format(**glados_shell))
+
+        glados_shell = sanitize(glados)
 
         if DEBUG: print("Using Glados information from config file {0}:\n".format(configFile), json.dumps(glados, indent = 4))
 
@@ -512,6 +539,7 @@ if __name__ == '__main__':
 
         if choice in entries:
             glados = {**glados, **entries[choice]} # merge the args, where the second has priority
+            glados_shell = sanitize(glados)
             if DEBUG: print("User selected Glados server #{0}".format(choice))
             if DEBUG: print("Using Glados information obtained from DNS entry #{0}:\n".format(choice), json.dumps(glados, indent = 4))
         else:
@@ -540,7 +568,7 @@ if __name__ == '__main__':
                 question = True,
                 width = 400,
                 title = t("Continue"),
-                text = t("An exam server was found in the configuration file (via {interface}):\n\n    Desciption: {gladosDesc}\n    Hostname: {gladosHost}\n    IP: {gladosIp}\n\nSwitch to exam mode?", **glados)
+                text = t("An exam server was found in the configuration file (via {interface}):\n\n    Desciption: {gladosDesc}\n    Hostname: {gladosHost}\n    IP: {gladosIp}\n\nSwitch to exam mode?", **glados_shell)
         ), env = env)[0]:
             clean_exit("User aborted before switching to exam mode.")
     else:
@@ -567,8 +595,8 @@ if __name__ == '__main__':
 
     helpers.run('service lernstick-firewall restart')
     if isDeb9OrNewer(): helpers.run('squid -k reconfigure')
-    helpers.run('iptables -I INPUT -p tcp --dport 22 -s {gladosIp} -m comment --comment "searchExamServer" -j ACCEPT'.format(**glados))
-    helpers.run('iptables -I OUTPUT -p tcp --dport {gladosPort} -d {gladosIp} -m comment --comment "searchExamServer" -j ACCEPT'.format(**glados))
+    helpers.run('iptables -I INPUT -p tcp --dport 22 -s {gladosIp} -m comment --comment "searchExamServer" -j ACCEPT'.format(**glados_shell))
+    helpers.run('iptables -I OUTPUT -p tcp --dport {gladosPort} -d {gladosIp} -m comment --comment "searchExamServer" -j ACCEPT'.format(**glados_shell))
 
     # this sleep is needed, else the http request would fail (network error)
     time.sleep(1)
@@ -588,14 +616,20 @@ if __name__ == '__main__':
         print("Client version information:\n", json.dumps(client, indent = 4))
         print("Server version information:\n", json.dumps(server, indent = 4))
 
+    for v in ['server_version', 'wants_lernstick_flavor', 'wants_lernstick_version', 'wants_client_version', 'wants_rdiff_backup_version']:
+        if not v in server:
+            exit_with_error_message(t("The server does not provide information about '{v}'. Therefore, we cannot make sure that everthing will work. Please update your Glados server.", v = v))
+
     check_version(server['server_version'], client['wants_server_version'],
         t("Server version mismatch. Got {ver}, but client needs {wants}."))
     check_version(client['lernstick_flavor'], server['wants_lernstick_flavor'],
-        t("Client version mismatch. Got {ver}, but server needs {wants}."))
+        t("Lernstick flavor mismatch. Got {ver}, but server needs {wants}."))
     check_version(client['lernstick_version'], server['wants_lernstick_version'],
-        t("Client version mismatch. Got {ver}, but server needs {wants}."))
+        t("Lernstick version mismatch. Got {ver}, but server needs {wants}."))
     check_version(client['client_version'], server['wants_client_version'],
         t("Client version mismatch. Got {ver}, but server needs {wants}."))
+    check_version(client['rdiff_backup_version'], server['wants_rdiff_backup_version'],
+        t("rdiff-backup version mismatch. Got {ver}, but server needs {wants}. Please update your Lernsticks and/or Glados-server such that they share the same rdiff-backup version; either both 2.x, or both 1.2.x."))
 
     if DEBUG: print("Version check was successful!")
 
@@ -607,11 +641,12 @@ if __name__ == '__main__':
 
     # The or fixes the newest debian9 version
     _, glados['partitionSystem'] = helpers.run("blkid -l -L system || echo /dev/sr0")
+    glados_shell = sanitize(glados)
 
     # write the info file
     contents = ''
     for variable in variables + ['partitionSystem']:
-        contents += '{0}="{1}"\n'.format(variable, glados[variable])
+        contents += '{0}={1}\n'.format(variable, glados_shell[variable])
     file_put_contents(infoFile, contents)
 
     # remount /run without noexec (Debian 9 changed this, /run/initramfs/shutdown will not be executed elsewhere)
@@ -628,7 +663,7 @@ if __name__ == '__main__':
     if DEBUG: print("Opening URL {0} in wxbrowser".format(url))
     cmd = 'sudo -u user /usr/bin/wxbrowser --geometry "800x310" -c -n "{title}" -i "/usr/share/icons/oxygen/base/128x128/actions/system-search.png" "{url}"'.format(
         title = t("Exam Client"),
-        url = url
+        url = shlex.quote(url)
     )
     helpers.run(cmd, env = env)
 
