@@ -13,6 +13,8 @@ def geometry(arg):
         raise argparse.ArgumentTypeError
     return tuple(map(int, arg.split('x')))
 
+_print = lambda *args, **kwargs: print("wxbrowser:", *args, **kwargs)
+
 class Window(wx.Frame):
     # derives a new class from Frame
     def __init__(self, *args, **kwds):
@@ -32,7 +34,7 @@ class Window(wx.Frame):
         if self.args.center: self.CentreOnScreen()
 
     def onLoaded(self, event):
-        if self.args.verbose: print("loaded", event.URL)
+        if self.args.verbose: _print("loaded", event.URL)
         self.SetTitle(self.browser.GetCurrentTitle())
 
     def resize(self, geometry, center):
@@ -44,16 +46,16 @@ class Window(wx.Frame):
             self.SetSize(x, y, width, height)
         else:
             self.SetSize(width, height)
-        if self.args.verbose: print("resizing window to {0}x{1})".format(width, height))
+        if self.args.verbose: _print("resizing window to {0}x{1})".format(width, height))
 
     def onClicked(self, event):
-        if self.args.verbose: print("clicked", event.URL)
+        if self.args.verbose: _print("clicked", event.URL)
         try:
             url, anchor = event.URL.split("#", 1)
-            if self.args.verbose: print("anchor", anchor)
+            if self.args.verbose: _print("anchor", anchor)
             try:
                 proto, data = anchor.split(":", 1)
-                if self.args.verbose: print("proto", proto)
+                if self.args.verbose: _print("proto", proto)
                 if proto == "wxbrowser":
                     try: action, arg = data.split(":", 1)
                     except ValueError: action, arg = data, None
@@ -67,19 +69,19 @@ class Window(wx.Frame):
             self.args.geometry = geometry(arg)
             self.resize(self.args.geometry, self.args.center)
         elif action == 'close':
-            if self.args.verbose: print("closing window")
+            if self.args.verbose: _print("closing window")
             return exit() # exits immediately, self.Close() or self.Destroy() are waiting for an event to process
         elif action == 'shutdown':
-            if self.args.verbose: print("shutting down")
+            if self.args.verbose: _print("shutting down")
             os.system("/sbin/shutdown now -h")
         else:
-            if self.args.verbose: print("action {0} not found".format(action))
+            if self.args.verbose: _print("action {0} not found".format(action))
 
     def onRequested(self, event):
-        if self.args.verbose: print("requested", event.URL)
+        if self.args.verbose: _print("requested", event.URL)
 
     def onNewWindow(self, event):
-        if self.args.verbose: print("newwindow", event.URL)
+        if self.args.verbose: _print("newwindow", event.URL)
         window = Window(None, -1)
         window.args = self.args
         window.args.geometry = self.args.new_window_geometry
@@ -112,3 +114,4 @@ if __name__ == '__main__':
     window.Load()
     window.Show()
     app.MainLoop()
+
