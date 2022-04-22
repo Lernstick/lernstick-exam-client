@@ -1,29 +1,18 @@
 #!/bin/bash
 
-wget="/usr/bin/wget"
-wgetOptions="--timeout=10 --tries=3"
 zenity="/usr/bin/zenity"
 zenityOptions="--width=300"
 
-. /var/lib/lernstick-exam-client/functions.sh
-
-# get DISPLAY and XAUTHORITY env vars
-set -o allexport
-. <(strings /proc/*/environ 2>/dev/null | awk -F= '$1=="DISPLAY"||$1=="XAUTHORITY"' | head -2)
-set +o allexport
-
-# transmit state to server
-function clientState()
-{
-	  echo "$1"
-	    ${wget} ${wgetOptions} -qO- "${urlNotify//\{state\}/$1}" 2>&1 >/dev/null
-    }
+[ -r "/info" ] && . /info
 
 if [ -z "${urlFinish}" ]; then
-	  ${zenity} ${zenityOptions} --error --title "Error" --text "Error: info file not present."
-	    exit
+    ${zenity} ${zenityOptions} --error --title "Error" --text "Error: info file not present."
+    exit 1
 fi
 
 # initiate the finish process
-/usr/bin/wxbrowser -c --geometry "800x600" -n "Hand-in exam" -i /usr/share/icons/gnome/256x256/actions/system-log-out.png "${urlFinish}"
-
+/usr/bin/wxbrowser -c --geometry "800x600" \
+    -n "Hand-in exam" --class "hand-in-exam" \
+    -i /usr/share/icons/gnome/256x256/actions/system-log-out.png \
+    -s /usr/bin/poll_open_windows.py 1 \
+    "${urlFinish}"
