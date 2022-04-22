@@ -1,10 +1,12 @@
 [Desktop Entry]
 Categories=X-lernstick;
-Exec=/usr/bin/finishExam 
+SingleMainWindow=true
+Exec=/usr/bin/finishExam
 Icon=/usr/share/icons/gnome/256x256/actions/system-log-out.png
 GenericName=Hand in exam
 GenericName[de]=Prüfung abgeben
 Name=Hand in exam
 Name[de]=Prüfung abgeben
 StartupNotify=true
+StartupWMClass=hand-in-exam
 Type=Application
