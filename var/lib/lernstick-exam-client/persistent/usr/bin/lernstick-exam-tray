@@ -10,7 +10,6 @@ import collections # collections.deque()
 from datetime import datetime # datetime.strptime(), datetime.fromtimestamp()
 import requests # requests.get()
 import subprocess # subprocess.Popen()
-import locale
 
 # append to the interpreter’s search path for modules
 directory = "/var/lib/lernstick-exam-client/"
@@ -26,45 +25,10 @@ NOTIFY_URL = 'actionNotify'
 SIGNAL_FILE = '/tmp/lernstick-exam-tray'
 DEBUG = True
 
-# translations
-messages = {
-    'de': {
-        'Status:': 'Status:',
-        '✔️ The system is online (last checked {n} minutes ago).': '✔️ Das System ist online (letzter Check vor {n} Minuten).',
-        '❌ The system is not online (last time was {n} minutes ago).': '❌ Das System ist nicht online (letztes Mal war vor {n} Minuten).',
-        '{sign} There was no backup since the system has started ({n} minutes ago).': '{sign} Kein Backup seit das System gestartet wurde (vor {n} Minuten).',
-        '{sign} The last successfull backup was at {date:%H:%M:%S} ({n} minutes ago).': '{sign} Das letzte erfolgreiche Backup war um {date:%H:%M:%S} (vor {n} Minuten).',
-        'History:': 'Verlauf:',
-        '🔄 Update status now': '🔄 Status jetzt aktualisieren',
-        '❔ Show exam info': '❔ Prüfungsinformation anzeigen',
-        '‼️ Hand-in exam': '‼️ Prüfung abgeben',
-        'Manual check: Everything seems fine.': 'Manueller Check: Alles sieht gut aus.',
-        'The current backup has failed. Please contact your supervisor.': 'Das aktuelle Backup hat fehlgeschlagen. Bitte wenden Sie sich an Ihre Prüfungsaufsicht.',
-        'Backup successfull': 'Backup erfolgreich',
-        'A manual restore has failed. Please contact your supervisor.': 'Eine manuelle Wiederherstellung hat fehlgeschlagen. Bitte wenden Sie sich an Ihre Prüfungsaufsicht.',
-        'Manual restore successfull.': 'Manuelle Wiederherstellung erfolgreich.',
-        'There was no backup since the system has started. Please contact your supervisor.': 'Kein Backup seit das System gestartet wurde. Bitte wenden Sie sich an Ihre Prüfungsaufsicht.',
-        'There was no backup since {0} minutes. Please contact your supervisor.': 'Kein Backup seit {0} Minuten. Bitte wenden Sie sich an Ihre Prüfungsaufsicht.',
-        'The network connection could not be established': 'Die Netzwerkverbindung konnte nicht hergestellt werden',
-        'The GLaDOS-server is not reachable. Please contact your supervisor.': 'Der GLaDOS-server ist nicht erreichbar. Bitte wenden Sie sich an Ihre Prüfungsaufsicht.',
-        'Error': 'Fehler',
-        'Info': 'Info'
-    }
-}
-
 # check the environment variables
 if not ('DISPLAY' in os.environ and 'XAUTHORITY' in os.environ and 'DBUS_SESSION_BUS_ADDRESS' in os.environ):
     print('DISPLAY, XAUTHORITY and DBUS_SESSION_BUS_ADDRESS have to be available.', file = sys.stderr)
     exit(1)
-
-# the language code
-lang = locale.getdefaultlocale()[0].split('_')[0] # eg: de, en, es, ...
-
-def _(string, lang = lang):
-    if lang in messages and string in messages[lang]:
-        return messages[lang][string]
-    else:
-        return string
 
 # @return int timestamp in milliseconds
 def timestamp_ms():
@@ -123,11 +87,7 @@ class TaskBarIcon(wx.adv.TaskBarIcon):
         self.ping_url = self.ping_url.format(token = self.token, state = 'Ping recieved')
         self.display = helpers.get_env("DISPLAY")
         self.xauthority = helpers.get_env("XAUTHORITY")
-        self.env = {
-            'DISPLAY': self.display,
-            'XAUTHORITY': self.xauthority,
-            'LANG': helpers.get_env("LANG")
-        }
+        self.env = {'DISPLAY': self.display, 'XAUTHORITY': self.xauthority}
 
         self.state = {
             'BACKUP_OK':  True, # because the check sets it to False only
@@ -155,15 +115,15 @@ class TaskBarIcon(wx.adv.TaskBarIcon):
     def CreatePopupMenu(self):
         menu = wx.Menu()
 
-        item = create_menu_item(menu, _('Status:'), self.noop)
+        item = create_menu_item(menu, 'Status:', self.noop)
         item.Enable(False)
 
         if self.state['NETWORK_OK']:
-            label = _('✔️ The system is online (last checked {n} minutes ago).').format(
+            label = '✔️ The system is online (last checked {n} minutes ago).'.format(
                 n = int((timestamp_ms() - self.last_online)/60000)
             )
         else:
-            label = _('❌ The system is not online (last time was {n} minutes ago).').format(
+            label = '❌ The system is not online (last time was {n} minutes ago).'.format(
                 n = int((timestamp_ms() - self.last_online)/60000)
             )
         item = create_menu_item(menu, label, self.noop)
@@ -172,12 +132,12 @@ class TaskBarIcon(wx.adv.TaskBarIcon):
         lsb = get_last_successful_backup()
         sign = '✔️' if self.state['BACKUP_OK'] else '❌'
         if lsb == 0:
-            label = _('{sign} There was no backup since the system has started ({n} minutes ago).').format(
+            label = '{sign} There was no backup since the system has started ({n} minutes ago).'.format(
                 sign = sign,
                 n = int((timestamp_ms() - self.exam_started)/60000)
             )
         else:
-            label = _('{sign} The last successfull backup was at {date:%H:%M:%S} ({n} minutes ago).').format(
+            label = '{sign} The last successfull backup was at {date:%H:%M:%S} ({n} minutes ago).'.format(
                 sign = sign,
                 date = datetime.fromtimestamp(int(lsb/1000)),
                 n = int((timestamp_ms() - lsb)/60000)
@@ -187,7 +147,7 @@ class TaskBarIcon(wx.adv.TaskBarIcon):
 
         menu.AppendSeparator()
 
-        item = create_menu_item(menu, _('History:'), self.noop)
+        item = create_menu_item(menu, 'History:', self.noop)
         item.Enable(False)
 
         for n in self.log:
@@ -200,9 +160,9 @@ class TaskBarIcon(wx.adv.TaskBarIcon):
             item.Enable(False)
 
         menu.AppendSeparator()
-        create_menu_item(menu, _('🔄 Update status now'), self.onClickUpdate)
-        create_menu_item(menu, _('❔ Show exam info'), self.onClickInfo)
-        create_menu_item(menu, _('‼️ Hand-in exam'), self.onClickHandIn)
+        create_menu_item(menu, '🔄 Update status now', self.onClickUpdate)
+        create_menu_item(menu, '❔ Show exam info', self.onClickInfo)
+        create_menu_item(menu, '‼️ Hand-in exam', self.onClickHandIn)
         return menu
 
     # Creates the popup menu
@@ -210,14 +170,14 @@ class TaskBarIcon(wx.adv.TaskBarIcon):
     # @param wx.CommandEvent event
     def onClickUpdate(self, event):
         if self.onIntervalTimer(event):
-            self.systemNotification('info', _('Manual check: Everything seems fine.'))
+            self.systemNotification('info', 'Manual check: Everything seems fine.')
 
     # Opens the show_info window
     # @param TaskBarIcon self current object instance
     # @param wx.CommandEvent event
     def onClickInfo(self, event):
         subprocess.Popen(["show_info"],
-            env = self.env,
+            env = os.environ,
             start_new_session = True
         )
 
@@ -226,7 +186,7 @@ class TaskBarIcon(wx.adv.TaskBarIcon):
     # @param wx.CommandEvent event
     def onClickHandIn(self, event):
         subprocess.Popen(["finishExam"],
-            env = self.env,
+            env = os.environ,
             start_new_session = True
         )
 
@@ -259,7 +219,7 @@ class TaskBarIcon(wx.adv.TaskBarIcon):
             print("DEBUG> msg:", msg)
 
         if code == self.BACKUP_FAILED:
-            self.systemNotification('error', _('The current backup has failed. Please contact your supervisor.'))
+            self.systemNotification('error', 'The current backup has failed. Please contact your supervisor.')
             self.state['BACKUP_OK'] = False
         elif code == self.BACKUP_SUCCESSFUL:
             self.last_successful_backup = timestamp_ms()
@@ -267,13 +227,13 @@ class TaskBarIcon(wx.adv.TaskBarIcon):
             self.log.appendleft({
                 'timestamp': self.last_successful_backup,
                 'type': 'info',
-                'message': _('Backup successfull'),
+                'message': 'Backup successfull',
                 'obj': None
             })
         elif code == self.RESTORE_FAILED:
-            self.systemNotification('error', _('A manual restore has failed. Please contact your supervisor.'))
+            self.systemNotification('error', 'A manual restore has failed. Please contact your supervisor.')
         elif code == self.RESTORE_SUCCESSFUL:
-            self.systemNotification('info', _('Manual restore successfull.'))
+            self.systemNotification('info', 'Manual restore successfull.')
         self.updateIcon()
 
     # Send a notification to the user.
@@ -283,7 +243,7 @@ class TaskBarIcon(wx.adv.TaskBarIcon):
     def systemNotification(self, severity, message):
         # ICON_WARNING, ICON_ERROR, ICON_INFORMATION
         icon = wx.ICON_ERROR if severity == 'error' else wx.ICON_INFORMATION
-        title = _('Error') if severity == 'error' else _('Info')
+        title = 'Error' if severity == 'error' else 'Info'
         notification = wx.adv.NotificationMessage(title,
             message = message,
             flags = icon)
@@ -307,13 +267,13 @@ class TaskBarIcon(wx.adv.TaskBarIcon):
         since_started = abs(timestamp_ms() - self.exam_started)
         since_backup  = abs(timestamp_ms() - self.last_successful_backup)
         if self.last_successful_backup == 0 and since_started > self.backup_tolerance:
-            msg = _('There was no backup since the system has started. Please contact your supervisor.')
+            msg = 'There was no backup since the system has started. Please contact your supervisor.'
             self.systemNotification('error', msg)
             self.state['BACKUP_OK'] = False
             return False
         elif self.last_successful_backup != 0 and since_backup > self.backup_tolerance:
             n = int((timestamp_ms() - self.last_successful_backup)/60000)
-            msg = _('There was no backup since {0} minutes. Please contact your supervisor.')
+            msg = 'There was no backup since {0} minutes. Please contact your supervisor.'
             self.systemNotification('error', msg.format(n))
             self.state['BACKUP_OK'] = False
             return False
@@ -322,7 +282,7 @@ class TaskBarIcon(wx.adv.TaskBarIcon):
     def notifyNetwork(self):
         try: r = requests.get(self.ping_url, timeout=10)
         except:
-            msg = _('The network connection could not be established')
+            msg = 'The network connection could not be established'
             self.systemNotification('error', msg)
             self.state['NETWORK_OK'] = False
             return False
@@ -332,7 +292,7 @@ class TaskBarIcon(wx.adv.TaskBarIcon):
             self.state['NETWORK_OK'] = True
             return True
         else:
-            msg = _('The GLaDOS-server is not reachable. Please contact your supervisor.')
+            msg = 'The GLaDOS-server is not reachable. Please contact your supervisor.'
             self.systemNotification('error', msg)
             self.state['NETWORK_OK'] = False
             return False
