@@ -37,18 +37,20 @@ def get_info (variable, file = '/info'):
 # Return an environment variable from a currently running process.
 # @param string variable environment variable to retrieve
 # @param string pid process id of the process to retrieve the environment variable from
+# @param string uid check only processes with user id
+# @param string filter regex to filter the variable value by (first item that matches is returned)
 # @return string|False the variable or False if not found
 ##
-def get_env (variable, pid = "*"):
-    for file in glob.glob("/proc/{0}/environ".format(pid)):
-        if os.path.isfile(file):
+def get_env (variable, pid = '*', uid = '*', filter = r'.*'):
+    r = re.compile(filter)
+    for file in glob.glob('/proc/{0}/environ'.format(pid)):
+        if os.path.isfile(file) and (uid == '*' or os.stat(file).st_uid == uid):
             handle = open(file, 'r')
             for line in handle.read().split('\0'):
                 try:
-                    var, value = line.split("=", 2)
-                    if (var == variable):
+                    var, value = line.split('=', 2)
+                    if (var == variable and re.match(r, value)):
                         return value
-                    print("{} = {}".format(var, val))
                 except: pass
     return None
 
