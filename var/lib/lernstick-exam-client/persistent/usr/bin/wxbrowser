@@ -6,6 +6,15 @@ import wx.html2 # wx.html2.WebView
 import re # re.comple(), re.match()
 import argparse # argparse.ArgumentParser()
 import os # os.system()
+import json # dumps() quote strings into a javascript literal
+
+# append to the interpreter’s search path for modules
+directory = "/var/lib/lernstick-exam-client/"
+sys.path.append(directory)
+import functions as helpers # get_config(), get_info(), get_env(), run()
+
+# the javascript code-piece that is executed when the script ended
+js_triggerEvent = "$(document).trigger('wxbrowser:script', [{0}]);"
 
 def geometry(arg):
     regex = re.compile(r"^[0-9]+x[0-9]+$")
@@ -17,8 +26,8 @@ _print = lambda *args, **kwargs: print("wxbrowser:", *args, **kwargs)
 
 class Window(wx.Frame):
     # derives a new class from Frame
-    def __init__(self, *args, **kwds):
-        wx.Frame.__init__(self, *args, **kwds)
+    def __init__(self, *pargs, **kwargs):
+        wx.Frame.__init__(self, *pargs, **kwargs)
         self.childs = []
         self.browser = wx.html2.WebView.New(self)
         self.browser.Bind(wx.html2.EVT_WEBVIEW_LOADED, self.onLoaded)
@@ -26,33 +35,37 @@ class Window(wx.Frame):
         self.browser.Bind(wx.html2.EVT_WEBVIEW_NAVIGATED, self.onRequested) # may not be stopped
         self.browser.Bind(wx.html2.EVT_WEBVIEW_NEWWINDOW, self.onNewWindow)
         self.browser.Bind(wx.html2.EVT_WEBVIEW_ERROR, self.onError)
+        if args.script != None:
+            self.timer = wx.Timer(self)
+            self.Bind(wx.EVT_TIMER, self.onIntervalTimer, self.timer)
+            self.timer.Start(int(args.script[1])*1000) # every 0.1 second
 
     def Load(self):
         self.tries = 0
-        if self.args.verbose: _print(f"waiting initial delay of {self.args.retry_delays[0]} sec")
-        wx.CallLater(self.args.retry_delays[0]*1000, lambda: self.browser.LoadURL(self.args.url))
-        if self.args.icon: self.SetIcon(wx.Icon(self.args.icon))
-        if self.args.fullscreen: self.ShowFullScreen(True)
-        if self.args.geometry is not None: self.resize(self.args.geometry, self.args.center)
-        if self.args.center: self.CentreOnScreen()
+        if args.verbose: _print(f"waiting initial delay of {args.retry_delays[0]} sec")
+        wx.CallLater(args.retry_delays[0]*1000, lambda: self.browser.LoadURL(args.url))
+        if args.icon: self.SetIcon(wx.Icon(args.icon))
+        if args.fullscreen: self.ShowFullScreen(True)
+        if args.geometry is not None: self.resize(args.geometry, args.center)
+        if args.center: self.CentreOnScreen()
 
     def onLoaded(self, event):
-        if self.args.verbose: _print("loaded", event.URL)
+        if args.verbose: _print("loaded", event.URL)
         self.SetTitle(self.browser.GetCurrentTitle())
 
     def onError(self, event):
-        if self.args.verbose: _print("error loading{0}".format(f" (retry {self.tries}/{self.args.retries})" if self.tries > 0 else ""), event.URL)
+        if args.verbose: _print("error loading{0}".format(f" (retry {self.tries}/{args.retries})" if self.tries > 0 else ""), event.URL)
         self.tries += 1
-        if self.tries <= self.args.retries or self.args.retries == -1:
+        if self.tries <= args.retries or args.retries == -1:
             wx.CallAfter(lambda: self.retry())
         else:
-            if self.args.verbose: _print("giving up on", event.URL)
+            if args.verbose: _print("giving up on", event.URL)
             self.tries = 0
 
     def retry(self):
-        delay = self.args.retry_delays[self.tries] if self.tries < len(self.args.retry_delays) else self.args.retry_delays[-1]
-        if self.args.verbose: _print(f"retrying in {delay} sec")
-        wx.CallLater(delay*1000, lambda: self.browser.LoadURL(self.args.url))
+        delay = args.retry_delays[self.tries] if self.tries < len(args.retry_delays) else args.retry_delays[-1]
+        if args.verbose: _print(f"retrying in {delay} sec")
+        wx.CallLater(delay*1000, lambda: self.browser.LoadURL(args.url))
 
     def resize(self, geometry, center):
         width, height = geometry[0], geometry[1]
@@ -63,16 +76,16 @@ class Window(wx.Frame):
             self.SetSize(x, y, width, height)
         else:
             self.SetSize(width, height)
-        if self.args.verbose: _print("resizing window to {0}x{1})".format(width, height))
+        if args.verbose: _print("resizing window to {0}x{1})".format(width, height))
 
     def onClicked(self, event):
-        if self.args.verbose: _print("clicked", event.URL)
+        if args.verbose: _print("clicked", event.URL)
         try:
             url, anchor = event.URL.split("#", 1)
-            if self.args.verbose: _print("anchor", anchor)
+            if args.verbose: _print("anchor", anchor)
             try:
                 proto, data = anchor.split(":", 1)
-                if self.args.verbose: _print("proto", proto)
+                if args.verbose: _print("proto", proto)
                 if proto == "wxbrowser":
                     try: action, arg = data.split(":", 1)
                     except ValueError: action, arg = data, None
@@ -83,29 +96,42 @@ class Window(wx.Frame):
 
     def callAction(self, action, arg):
         if action == 'resize':
-            self.args.geometry = geometry(arg)
-            self.resize(self.args.geometry, self.args.center)
+            args.geometry = geometry(arg)
+            self.resize(args.geometry, args.center)
         elif action == 'close':
-            if self.args.verbose: _print("closing window")
+            if args.verbose: _print("closing window")
             return exit() # exits immediately, self.Close() or self.Destroy() are waiting for an event to process
         elif action == 'shutdown':
-            if self.args.verbose: _print("shutting down")
+            if args.verbose: _print("shutting down")
             os.system("/sbin/shutdown now -h")
         else:
-            if self.args.verbose: _print("action {0} not found".format(action))
+            if args.verbose: _print("action {0} not found".format(action))
 
     def onRequested(self, event):
-        if self.args.verbose: _print("requested", event.URL)
+        if args.verbose: _print("requested", event.URL)
 
     def onNewWindow(self, event):
-        if self.args.verbose: _print("newwindow", event.URL)
+        if args.verbose: _print("newwindow", event.URL)
         window = Window(None, -1)
-        window.args = self.args
-        window.args.geometry = self.args.new_window_geometry
+        window.args = args
+        window.args.geometry = args.new_window_geometry
         window.args.url = event.URL
         window.Load()
         window.Show()
         self.childs.append(window)
+
+    # The interval ticker for the script
+    # @param Window self current object instance
+    # @param wx.CommandEvent event
+    # @return the return value of the script
+    def onIntervalTimer(self, event):
+        retval, output = helpers.run(args.script[0], env = os.environ)
+        if args.verbose: _print("script {0} executed: exit code {1}".format(args.script[0], retval))
+        exec_js = js_triggerEvent.format(json.dumps(output) if retval else 'false')
+        if retval == False: _print("script failed:", output)
+        if args.verbose: _print("executing javascript:", (exec_js[:75] + ' ...') if len(exec_js) > 75 else exec_js)
+        self.browser.RunScript(exec_js)
+        return retval
 
 if __name__ == '__main__':
     # parse the command line arguments
@@ -114,17 +140,19 @@ if __name__ == '__main__':
     parser.add_argument("--verbose", "-v", help="verbose output", action="store_true")
     parser.add_argument("--icon", "-i", help="the icon", metavar='PATH')
     parser.add_argument("--name", "-n", help="the name of the executable to be shown in the dash or taskbar", default=sys.argv[0])
+    parser.add_argument("--class", help="the name of the executable to be shown in the dash or taskbar", dest="wm_class", default=sys.argv[0])
     parser.add_argument("--center", "-c", help="centres the window on screen", action="store_true")
     parser.add_argument("--new-window-geometry", "-ng", help="the width and height in pixels of a new window", type=geometry, metavar='WIDTHxHEIGHT', default='800x600')
     parser.add_argument("--retries", "-r", help="number of retries on fail, (set -1 for infinite retries)", type=int, default=0)
     parser.add_argument("--retry-delays", "-d", help="delay for each retries in sec (index 0 is for the delay of the initial request), default is 0 3 3 ...", type=int, nargs='+', dest='retry_delays', default=[0, 3])
+    parser.add_argument("--script", "-s", nargs=2, help='run a script in the background and feed its output as an event "wxbrowser:script" into the javascript of the running page. Listen to this event by $(document).on("wxbrowser:script", function(e, json) {...}, where json contains the output as a string.', metavar='PATH INTERVAL')
     arg_group = parser.add_mutually_exclusive_group()
     arg_group.add_argument("--geometry", "-g", help="the width and height in pixels", type=geometry, metavar='WIDTHxHEIGHT')
     arg_group.add_argument("--fullscreen", "-f", help="show the window in fullscreen", action="store_true")
-    args = parser.parse_args()
+    global args; args = parser.parse_args()
 
-    # set the executable name
-    sys.argv[0] = args.name
+    # set the WM_CLASS name
+    sys.argv[0] = args.wm_class
 
     app = wx.App(False)
     window = Window(None, -1)
