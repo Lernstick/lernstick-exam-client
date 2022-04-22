@@ -72,5 +72,5 @@ def run (cmd, env = {}, encoding = 'utf-8'):
     output, error = process.communicate()
     ret = True if process.returncode == 0 else False
     output = output if encoding == None else output.decode(encoding).strip()
-    return ret, output
-
+    error = error if encoding == None else error.decode(encoding).strip()
+    return ret, output if ret else output + error
