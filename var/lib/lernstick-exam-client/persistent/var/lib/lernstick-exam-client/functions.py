@@ -3,6 +3,7 @@ import os # os.path.isfile()
 import glob # glob.glob()
 import subprocess # subprocess.check_output(), subprocess.call()
 import json # json.load
+import re # re.compile(), re.match()
 
 ##
 # Return a exam config item
