@@ -25,4 +25,3 @@
 
 override_dh_auto_build:
 	dh_auto_build
-	./debian/update_mo.sh
