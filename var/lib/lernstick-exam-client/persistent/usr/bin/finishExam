@@ -13,6 +13,6 @@ fi
 # initiate the finish process
 /usr/bin/wxbrowser -c --geometry "800x600" \
     -n "Hand-in exam" --class "hand-in-exam" \
-    -i /usr/share/icons/gnome/256x256/actions/system-log-out.png \
+    -i /usr/share/icons/gnome/32x32/actions/system-log-out.png \
     -s /usr/bin/poll_open_windows.py 1 \
     "${urlFinish}"
