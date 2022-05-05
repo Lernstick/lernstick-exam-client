@@ -710,6 +710,9 @@ if __name__ == '__main__':
         title = t("Exam Client"),
         url = shlex.quote(url)
     )
-    helpers.run(cmd, env = env)
+    ret, output = helpers.run(cmd, env = env)
 
-    clean_exit('Reached end.')
+    if ret:
+        clean_exit('Reached end.')
+    else:
+        exit_with_error_message(t('Failed to open token prompt.'))

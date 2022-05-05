@@ -9,8 +9,11 @@ import os # os.system()
 import json # dumps() quote strings into a javascript literal
 
 # append to the interpreter’s search path for modules
-directory = "/var/lib/lernstick-exam-client/"
-sys.path.append(directory)
+directories = [
+    "/var/lib/lernstick-exam-client/",
+    "/var/lib/lernstick-exam-client/persistent/var/lib/lernstick-exam-client/"
+]
+sys.path.extend(directories)
 import functions as helpers # get_config(), get_info(), get_env(), run()
 
 # the javascript code-piece that is executed when the script ended
