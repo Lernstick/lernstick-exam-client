@@ -296,7 +296,8 @@ def exit_with_error_message(mesg, **kwargs):
         'title': t('Error'),
         'error': True,
         'width': 300,
-        'text': mesg
+        'text': mesg,
+        'no-markup': True
     }
     kwargs = {**default_args, **kwargs} # merge the args, where the second has priority
     helpers.run(zenity(**kwargs), env = env)
