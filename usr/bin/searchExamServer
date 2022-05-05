@@ -713,7 +713,7 @@ if __name__ == '__main__':
 
     # finally open wxbrowser
     if args.debug: print("Opening URL {0} in wxbrowser".format(url))
-    cmd = 'sudo -u user /usr/bin/wxbrowser --geometry "800x310" -c -n "{title}" -i "/usr/share/icons/oxygen/base/128x128/actions/system-search.png" "{url}"'.format(
+    cmd = 'sudo -u user /usr/bin/wxbrowser --geometry "800x310" -c -n "{title}" -i "/usr/share/icons/oxygen/base/32x32/actions/system-search.png" "{url}"'.format(
         title = t("Exam Client"),
         url = shlex.quote(url)
     )
