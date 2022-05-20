@@ -29,8 +29,16 @@ class TerminalColorFormatter(logging.Formatter):
     }
 
     def format(self, record):
-        formatter = logging.Formatter(self.FORMATS.get(record.levelno))
         return logging.Formatter(self.FORMATS.get(record.levelno)).format(record)
+
+##
+# Class for the file logging
+##
+class FileFormatter(logging.Formatter):
+    fmt = "%(asctime)s - %(levelname)s - %(funcName)s - %(message)s"
+
+    def format(self, record):
+        return logging.Formatter(self.fmt).format(record)
 
 ##
 # Return a exam config item
