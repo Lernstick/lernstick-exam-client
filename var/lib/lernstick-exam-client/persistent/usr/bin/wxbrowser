@@ -7,6 +7,7 @@ import re # re.comple(), re.match()
 import argparse # argparse.ArgumentParser()
 import os # os.system()
 import json # dumps() quote strings into a javascript literal
+import logging
 
 # append to the interpreter’s search path for modules
 directories = [
@@ -45,7 +46,7 @@ class Window(wx.Frame):
 
     def Load(self):
         self.tries = 0
-        if args.verbose: _print(f"waiting initial delay of {args.retry_delays[0]} sec")
+        logger.debug(f"waiting initial delay of {args.retry_delays[0]} sec")
         wx.CallLater(args.retry_delays[0]*1000, lambda: self.browser.LoadURL(args.url))
         if args.icon: self.SetIcon(wx.Icon(args.icon))
         if args.fullscreen: self.ShowFullScreen(True)
@@ -53,21 +54,21 @@ class Window(wx.Frame):
         if args.center: self.CentreOnScreen()
 
     def onLoaded(self, event):
-        if args.verbose: _print("loaded", event.URL)
+        logger.debug(f"loaded {event.URL}")
         self.SetTitle(self.browser.GetCurrentTitle())
 
     def onError(self, event):
-        if args.verbose: _print("error loading{0}".format(f" (retry {self.tries}/{args.retries})" if self.tries > 0 else ""), event.URL)
+        logger.error("error loading{0} {1}".format(f" (retry {self.tries}/{args.retries})" if self.tries > 0 else "", event.URL))
         self.tries += 1
         if self.tries <= args.retries or args.retries == -1:
             wx.CallAfter(lambda: self.retry())
         else:
-            if args.verbose: _print("giving up on", event.URL)
+            logger.debug(f"giving up on {event.URL}")
             self.tries = 0
 
     def retry(self):
         delay = args.retry_delays[self.tries] if self.tries < len(args.retry_delays) else args.retry_delays[-1]
-        if args.verbose: _print(f"retrying in {delay} sec")
+        logger.debug(f"retrying in {delay} sec")
         wx.CallLater(delay*1000, lambda: self.browser.LoadURL(args.url))
 
     def resize(self, geometry, center):
@@ -79,16 +80,16 @@ class Window(wx.Frame):
             self.SetSize(x, y, width, height)
         else:
             self.SetSize(width, height)
-        if args.verbose: _print("resizing window to {0}x{1})".format(width, height))
+        logger.debug("resizing window to {0}x{1})".format(width, height))
 
     def onClicked(self, event):
-        if args.verbose: _print("clicked", event.URL)
+        logger.debug(f"clicked {event.URL}")
         try:
             url, anchor = event.URL.split("#", 1)
-            if args.verbose: _print("anchor", anchor)
+            logger.debug(f"anchor {anchor}")
             try:
                 proto, data = anchor.split(":", 1)
-                if args.verbose: _print("proto", proto)
+                logger.debug(f"proto {proto}")
                 if proto == "wxbrowser":
                     try: action, arg = data.split(":", 1)
                     except ValueError: action, arg = data, None
@@ -102,19 +103,19 @@ class Window(wx.Frame):
             args.geometry = geometry(arg)
             self.resize(args.geometry, args.center)
         elif action == 'close':
-            if args.verbose: _print("closing window")
+            logger.debug("closing window")
             return exit() # exits immediately, self.Close() or self.Destroy() are waiting for an event to process
         elif action == 'shutdown':
-            if args.verbose: _print("shutting down")
+            logger.debug("shutting down")
             os.system("/sbin/shutdown now -h")
         else:
-            if args.verbose: _print("action {0} not found".format(action))
+            logger.warning("action {0} not found".format(action))
 
     def onRequested(self, event):
-        if args.verbose: _print("requested", event.URL)
+        logger.debug(f"requested {event.URL}")
 
     def onNewWindow(self, event):
-        if args.verbose: _print("newwindow", event.URL)
+        logger.debug(f"newwindow {event.URL}")
         window = Window(None, -1)
         window.args = args
         window.args.geometry = args.new_window_geometry
@@ -129,10 +130,10 @@ class Window(wx.Frame):
     # @return the return value of the script
     def onIntervalTimer(self, event):
         retval, output = helpers.run(args.script[0], env = os.environ)
-        if args.verbose: _print("script {0} executed: exit code {1}".format(args.script[0], retval))
+        logger.debug("script {0} executed: exit code {1}".format(args.script[0], retval))
         exec_js = js_triggerEvent.format(json.dumps(output) if retval else 'false')
-        if retval == False: _print("script failed:", output)
-        if args.verbose: _print("executing javascript:", (exec_js[:75] + ' ...') if len(exec_js) > 75 else exec_js)
+        if retval == False: logger.error(f"script failed: {output}")
+        logger.debug("executing javascript: {0}".formart((exec_js[:75] + ' ...') if len(exec_js) > 75 else exec_js))
         self.browser.RunScript(exec_js)
         return retval
 
@@ -153,6 +154,15 @@ if __name__ == '__main__':
     arg_group.add_argument("--geometry", "-g", help="the width and height in pixels", type=geometry, metavar='WIDTHxHEIGHT')
     arg_group.add_argument("--fullscreen", "-f", help="show the window in fullscreen", action="store_true")
     global args; args = parser.parse_args()
+
+    logger = logging.getLogger("root") # create a logger called root
+    logger.setLevel(logging.DEBUG if args.verbose else logging.INFO)
+    ch = logging.StreamHandler() # create console handler
+    ch.setFormatter(helpers.TerminalColorFormatter()) # formatter of console handler
+    logger.addHandler(ch) # add handlers to logger
+    logging.captureWarnings(True) # also capture warnings from other libs
+
+    logger.debug(f'Script launched with arguments: {sys.argv}')
 
     # set the WM_CLASS name
     sys.argv[0] = args.wm_class
