@@ -35,7 +35,6 @@ urlWhitelistFiles = [
     "/etc/lernstick-firewall/proxy.d/glados.conf"
 ]
 logFile = "/var/log/searchExamServer.log"
-logFileFormat = "%(asctime)s - %(levelname)s - %(funcName)s - %(message)s"
 infoFile = "/run/initramfs/info"
 compatFile = "/usr/share/lernstick-exam-client/compatibility.json"
 lernstick_version_files = [
@@ -443,7 +442,7 @@ if __name__ == '__main__':
     ch = logging.StreamHandler() # create console handler
     fh = logging.FileHandler(logFile) # create file handler
     ch.setFormatter(helpers.TerminalColorFormatter()) # formatter of console handler
-    fh.setFormatter(logging.Formatter(logFileFormat)) # set formatter of file handler
+    fh.setFormatter(helpers.FileFormatter()) # set formatter of file handler
     logger.addHandler(ch) # add handlers to logger
     logger.addHandler(fh)
     logging.captureWarnings(True) # also capture warnings from other libs
@@ -759,7 +758,8 @@ if __name__ == '__main__':
 
     # finally open wxbrowser
     logger.info(f"Opening URL {url} in wxbrowser")
-    cmd = 'sudo -u user /usr/bin/wxbrowser {debug} --geometry "800x310" -c -n "{title}" -i "/usr/share/icons/oxygen/base/128x128/actions/system-search.png" "{url}"'.format(
+    cmd = 'sudo -u user /usr/bin/wxbrowser {debug} --geometry "800x310" -c -n "{title}" -i "{icon}" "{url}"'.format(
+        icon = "/usr/share/icons/oxygen/base/128x128/actions/system-search.png",
         debug = '-v' if args.debug else '',
         title = t("Exam Client"),
         url = shlex.quote(url)
