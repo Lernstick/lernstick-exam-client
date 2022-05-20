@@ -4,6 +4,31 @@ import glob # glob.glob()
 import subprocess # subprocess.check_output(), subprocess.call()
 import json # json.load
 import re # re.compile(), re.match()
+import logging # logging.Formatter
+
+##
+# Class for the colored output of logging
+##
+class ColorFormatter(logging.Formatter):
+    grey = "\x1b[90;20m"
+    default = "\x1b[39;20m"
+    yellow = "\x1b[33;20m"
+    red = "\x1b[31;20m"
+    bold_red = "\x1b[31;1m"
+    reset = "\x1b[0m"
+    fmt = "%(asctime)s - %(levelname)s - %(message)s (%(filename)s:%(lineno)d)"
+
+    FORMATS = {
+        logging.DEBUG: grey + fmt + reset,
+        logging.INFO: default + fmt + reset,
+        logging.WARNING: yellow + fmt + reset,
+        logging.ERROR: red + fmt + reset,
+        logging.CRITICAL: bold_red + fmt + reset
+    }
+
+    def format(self, record):
+        formatter = logging.Formatter(self.FORMATS.get(record.levelno))
+        return logging.Formatter(self.FORMATS.get(record.levelno)).format(record)
 
 ##
 # Return a exam config item
