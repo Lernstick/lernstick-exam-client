@@ -466,6 +466,13 @@ if __name__ == '__main__':
 
     logger.debug(f'Environment variables: {json.dumps(env, indent = 4)}')
 
+    # abort even without cleaning up, if we are in an exam
+    if os.access('/booted', os.R_OK):
+        mesg = t("Cannot search for exam servers within an exam, exiting.")
+        logger.error(mesg)
+        helpers.run(zenity(title = t('Error'), error = True, width = 300, text = mesg, no_markup = True), env = env)
+        exit(1)
+
     # Exit if already running
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
