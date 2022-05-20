@@ -21,6 +21,8 @@ import time # time.sleep()
 import requests # requests.get()
 import http as ht # http.client
 from requests.adapters import HTTPAdapter, Retry
+import logging
+from logging.handlers import SysLogHandler
 
 # append to the interpreter’s search path for modules
 directory = "/var/lib/lernstick-exam-client/persistent/var/lib/lernstick-exam-client"
@@ -33,6 +35,8 @@ urlWhitelistFiles = [
     "/etc/lernstick-firewall/url_whitelist", # for backward compatibility, todo: remove as soon as possible
     "/etc/lernstick-firewall/proxy.d/glados.conf"
 ]
+logFile = "/var/log/searchExamServer.log"
+logFileFormat = "%(asctime)s - %(levelname)s - %(message)s"
 infoFile = "/run/initramfs/info"
 compatFile = "/usr/share/lernstick-exam-client/compatibility.json"
 lernstick_version_files = [
@@ -100,7 +104,7 @@ class TimeoutHTTPAdapter(HTTPAdapter):
             kwargs["timeout"] = self.timeout
         return super().send(request, **kwargs)
 
-# sets up the requests library to have a timeout and aretrying functionality.
+# sets up the requests library to have a timeout and a retrying functionality.
 def setup_requests():
     http = requests.Session()
     adapter = TimeoutHTTPAdapter(
@@ -120,13 +124,13 @@ def setup_requests():
 
 # translation function
 def t(string, lang = None, **kwargs):
-    if lang == None: lang = args.lang
+    if lang is None: lang = args.lang
 
     if lang != 'en':
         if lang in messages and string in messages[lang] and messages[lang][string] != '':
             string = messages[lang][string]
         elif args.translation:
-            print(f'\033[0;31m--> Missing translaton for language\033[0m "{lang}": "{string}"', file = sys.stderr)
+            logger.warning(f'Missing translaton for language "{lang}": "{string}"')
             if not hasattr(t, 'messages'): t.messages = {}
             if not lang in t.messages: t.messages[lang] = {}
             t.messages[lang][string] = ''
@@ -189,14 +193,17 @@ def check_version(ver, wants, exit_text = None):
         or False
     )
 
-    if ret == False and exit_text is not None:
+    if ret is False and exit_text is not None:
         exit_with_error_message(exit_text.format(ver = ver, wants = wants))
 
     return ret
 
 # Handles any cleanup on exit
-def clean_exit(reason = None):
-    print('Exiting gracefully (reason: {0})'.format(reason), file = sys.stderr)
+def clean_exit(reason = None, exit_code = 0):
+    if exit_code == 0:
+        logger.info(f'Exiting gracefully (reason: {reason})')
+    else:
+        logger.error(f'Exiting gracefully (reason: {reason})')
 
     # revert all changes to iptables
     helpers.run('iptables-save | grep -v "searchExamServer" | iptables-restore -w')
@@ -218,12 +225,15 @@ def clean_exit(reason = None):
     if isDeb9OrNewer(): helpers.run('squid -k reconfigure') # iptables stays
 
     if args.translation and hasattr(t, 'messages'):
-        print("Missing translatons summary:\n"+"#"*40+"\n", json.dumps(t.messages, indent = 4), "\n"+"#"*40)
+        logger.warning(f"Missing translatons summary:\n{json.dumps(t.messages, indent = 4)}")
 
-    exit(0)
+    logger.info('Script stopped')
+    logger.info('-'*40)
+
+    exit(exit_code)
 
 def trap(signal_received, frame):
-    clean_exit('signal {0} recieved'.format(signal_received))
+    clean_exit('signal {0} recieved'.format(signal_received), exit_code = 1)
 
 # equivalent to PHPs file_get_contents
 def file_get_contents(file):
@@ -290,12 +300,12 @@ def zenity(**kwargs):
             cmd += f' --{key}={shlex.quote(value)}'
         elif isinstance(value, list):
             for v in value: cmd += f' --{key}={shlex.quote(v)}'
-    if args.debug: print(f"zenity command: '{cmd}'")
+    logger.debug(f"zenity command: '{cmd}'")
     return cmd
 
 # exits with the message mesg, kwargs are for the zenity window
 def exit_with_error_message(mesg, **kwargs):
-    if args.debug: print(mesg, file=sys.stderr)
+    logger.error(mesg)
     default_args = {
         'title': t('Error'),
         'error': True,
@@ -305,15 +315,15 @@ def exit_with_error_message(mesg, **kwargs):
     }
     kwargs = {**default_args, **kwargs} # merge the args, where the second has priority
     helpers.run(zenity(**kwargs), env = env)
-    clean_exit(mesg)   
+    clean_exit(mesg, exit_code = 1)
 
 # obtain the url, kwargs is for http.get()
 def http_get(url, **kwargs):
-    if args.debug: print(f"getting URL: {url}")
+    logger.debug(f"getting URL: {url}")
     try:
         r = http.get(url, **kwargs)
     except requests.exceptions.RequestException as e:  # This is the correct syntax
-        if args.debug: print(repr(e), file = sys.stderr)
+        logger.error(repr(e))
         r = requests.models.Response()
         r.status_code = -1
         r.code = str(e)
@@ -418,12 +428,33 @@ if __name__ == '__main__':
     )
     parser.add_argument('-c', '--configFile',
         help = 'path to the config file (default: /etc/lernstick-exam-client.conf).',
-        default = '/etc/lernstick-exam-client.conf')
+        default = '/etc/lernstick-exam-client.conf'
+    )
     parser.add_argument('arg',
         nargs = '*',
         help = 'positional arguments from the NetworkManager dispatcher script (currently they are ignored)'
     )
     global args; args = parser.parse_args()
+
+    http = setup_requests()
+
+    # setup logging
+    logger = logging.getLogger("searchExamServer") # create root logger
+    logger.setLevel(logging.DEBUG if args.debug else logging.INFO)
+    ch = logging.StreamHandler() # create console handler
+    fh = logging.FileHandler(logFile) # create file handler
+    ch.setFormatter(helpers.ColorFormatter()) # formatter of console handler
+    fh.setFormatter(logging.Formatter(logFileFormat)) # set formatter of file handler
+    logger.addHandler(ch) # add handlers to logger
+    logger.addHandler(fh)
+    logging.captureWarnings(True) # also capture warnings from other libs
+    warnings_logger = logging.getLogger("py.warnings")
+    warnings_logger.addHandler(ch) # add our handlers to the warning log facility
+    warnings_logger.addHandler(fh)
+    ht.client.print = lambda *args: logger.debug("http - "+" ".join(args)) # hook the print function in http to logger.debug
+
+    logger.info('-'*40)
+    logger.info(f'Script launched with arguments: {sys.argv}')
 
     glados = {}
     glados_shell = {}
@@ -434,16 +465,14 @@ if __name__ == '__main__':
         'LANG': helpers.get_env('LANG')
     }
 
-    http = setup_requests()
-
-    if args.debug: print('Environment variables:', json.dumps(env, indent = 4))
+    logger.debug(f'Environment variables: {json.dumps(env, indent = 4)}')
 
     # Exit if already running
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
         s.bind(('localhost', 18493))
     except OSError:
-        print('Program is already running, exitting.', file = sys.stderr)
+        logger.error('Program is already running, exitting.')
         sys.exit(1)
 
     signal.signal(signal.SIGINT, trap)
@@ -462,7 +491,7 @@ if __name__ == '__main__':
     if os.path.isfile(infoFile) and os.access(infoFile, os.R_OK):
         glados = getVariablesFromFile(infoFile)
         glados_shell = sanitize(glados)
-        if args.debug: print("Using Glados information from previous run (file {0}):\n".format(infoFile), json.dumps(glados, indent = 4))
+        logger.debug(f'Using Glados information from previous run (file {infoFile}):\n: {json.dumps(glados, indent = 4)}')
 
     # if a configfile is used, don't display a selection list and use the config values instead
     if os.path.isfile(args.configFile) and os.access(args.configFile, os.R_OK):
@@ -475,7 +504,7 @@ if __name__ == '__main__':
         )
         zenity_process = subprocess.Popen(cmd, env = env, shell = True, stdin = subprocess.PIPE)
 
-        if args.debug: print("args.configFile found, using {}.".format(args.configFile))
+        logger.debug(f"args.configFile found, using {args.configFile}.")
 
         glados_config = getVariablesFromFile(args.configFile)
         for var in variables:
@@ -492,13 +521,14 @@ if __name__ == '__main__':
         for action in actions:
             glados[f"action{action}"] = "{gladosProto}://{gladosHost}:{gladosPort}/{0}".format(glados[f"action{action}"], **glados)
 
+        # check if there is a route to the ip addess of glados
         retval, glados['interface'] = helpers.run("ip -s route get {gladosIp} | perl -ne 'print $1 if /dev[\s]+([^\s]+)/'".format(**glados_shell))
 
         glados_shell = sanitize(glados)
 
-        if args.debug: print("Using Glados information from config file {0}:\n".format(args.configFile), json.dumps(glados, indent = 4))
+        logger.debug(f"Using Glados information from config file {args.configFile}:\n{json.dumps(glados, indent = 4)}")
 
-        if retval == False:
+        if retval is False:
             exit_with_error_message(t("The Glados server ({gladosDesc}, {gladosHost}, {gladosIp}) configured in the configuration file {file} is not reachable via your network connection(s). Aborting.", file = args.configFile, **glados), width = 500)
 
         # ending subprocess
@@ -506,10 +536,12 @@ if __name__ == '__main__':
         #stdout = zenity_process.communicate(input = b'100')[0] # 
 
     else:
+        logger.info(f'Configuration file "{args.configFile}" not present, falling back to a network scan ...')
         fixed = False
         choice = False
 
-        while choice == False:
+        while choice is False:
+            logger.debug(f'Scanning the network via broadcast DNS ...')
 
             # show the selection list until the user has chosen one
             zenity_cmd = zenity(list = True,
@@ -531,6 +563,7 @@ if __name__ == '__main__':
                 shell = True,
                 stdin = subprocess.PIPE,
                 stdout = subprocess.PIPE,
+                #stderr = subprocess.PIPE,
                 bufsize = 1 # line buffered
             )
 
@@ -540,14 +573,19 @@ if __name__ == '__main__':
             entries = {}
             while True:
                 line = readline(0.1)
-                if line == False:
-                    if zenity_process.poll() != None: # process has ended
-                        if zenity_process.returncode != 0:
+                if line is False:
+                    if avahi_process.poll() is not None:
+                        if avahi_process.returncode == 0:
+                            clean_exit('User aborted avahi')
+                        else:
+                            exit_with_error_message(t("avahi-browse failed with exit code {n}", n = avahi_process.returncode));
+                    if zenity_process.poll() is not None: # process has ended
+                        if zenity_process.returncode == 0:
+                            break
+                        elif zenity_process.returncode == 1:
                             clean_exit('User aborted zenity')
                         else:
-                            break
-                    if avahi_process.poll() != None:
-                        break
+                            exit_with_error_message(t("zenity failed with exit code {n}", n = zenity_process.returncode));
                 else:
                     line = line.rstrip().decode("utf-8") + '\n'
                     pieces = line.split(';')
@@ -568,7 +606,7 @@ if __name__ == '__main__':
                                 if res:
                                     entries[n][f"action{action}"] = "{gladosProto}://{gladosHost}:{gladosPort}/{0}".format(res.group(1), **entries[n])
                                 else:
-                                    if args.debug: print("Skipping invalid Glados DNS-entry for {gladosIp}:{gladosPort}".format(**entries[n]))
+                                    logger.debug("Skipping invalid Glados DNS-entry for {gladosIp}:{gladosPort}".format(**entries[n]))
                                     continue
 
                             # get the info URL manually
@@ -576,7 +614,7 @@ if __name__ == '__main__':
 
                             output_line = '{0}\n{gladosDesc}\n{gladosIp}\n{gladosHost}\n{gladosPort}\n{gladosProto}\n{interface}\n'.format(n, **entries[n])
 
-                            if args.debug: print("Found Glados server #{0} via DNS: {gladosDesc}, {gladosHost}, {gladosIp}, {gladosPort}".format(n, **entries[n]))
+                            logger.info("Found Glados server #{0} via DNS: desc:{gladosDesc}, host:{gladosHost}, ip:{gladosIp}".format(n, **entries[n]))
                             output_line = decimals_to_hex(output_line)
                             zenity_process.stdin.write(str.encode(output_line))
                             zenity_process.stdin.flush()
@@ -588,14 +626,13 @@ if __name__ == '__main__':
         if choice in entries:
             glados = {**glados, **entries[choice]} # merge the args, where the second has priority
             glados_shell = sanitize(glados)
-            if args.debug: print("User selected Glados server #{0}".format(choice))
-            if args.debug: print("Using Glados information obtained from DNS entry #{0}:\n".format(choice), json.dumps(glados, indent = 4))
+            logger.info(f"User selected Glados server #{choice}")
+            logger.info(f"Using Glados information obtained from DNS entry #{choice}")
         else:
             exit_with_error_message(t('Choice is invalid.'))
 
     if (not 'gladosHost' in glados) or (not 'gladosPort' in glados):
         exit_with_error_message(t('Glados host not found.'))
-
 
     # append the hostname and IP of glados to the /etc/hosts file, such that in the exam,
     # the server IP can be resolved without having a proper DNS service in the network.
@@ -603,7 +640,7 @@ if __name__ == '__main__':
     file_put_contents('/var/lib/lernstick-exam-client/persistent/etc/hosts',
         f"{glados['gladosIp']}     {glados['gladosHost']}\n", append = True)
 
-    if args.debug: print("Exam server found.")
+    logger.info("Glados server found")
 
     if fixed:
         # finish the processes
@@ -624,6 +661,8 @@ if __name__ == '__main__':
         zenity_process.terminate()
         avahi_process.stdin.close()
         avahi_process.terminate()
+
+    logger.debug(f"Full obtained Glados information:\n{json.dumps(glados, indent = 4)}")
 
     # starting new zenity subprocess
     cmd = zenity(width = 300, progress = True, pulsate = True, no_cancel = True, auto_close = True,
@@ -651,21 +690,23 @@ if __name__ == '__main__':
     # this sleep is needed, else the http request would fail (network error)
     time.sleep(1)
 
+    logger.debug("Fetching SSH key ...")
     zenity_send(zenity_process, t('Fetching SSH key'))
     glados['sshKey'] = get_ssh_key()
     glados_shell = sanitize(glados)
 
+    logger.debug("Fetching Client information ...")
     client = get_client_version()
 
+    logger.debug("Fetching Server information ...")
     zenity_send(zenity_process, t('Fetching server information'))
     server = get_server_version()
 
     zenity_send(zenity_process, t('Checking versions'))
 
-    if args.debug:
-        print("Version check")
-        print("Client version information:\n", json.dumps(client, indent = 4))
-        print("Server version information:\n", json.dumps(server, indent = 4))
+    logger.debug("Version check:")
+    logger.debug(f"Client version information:\n{json.dumps(client, indent = 4)}")
+    logger.debug(f"Server version information:\n{json.dumps(server, indent = 4)}")
 
     for v in ['server_version', 'wants_lernstick_flavor', 'wants_lernstick_version', 'wants_client_version', 'wants_rdiff_backup_version']:
         if not v in server:
@@ -682,7 +723,7 @@ if __name__ == '__main__':
     check_version(client['rdiff_backup_version'], server['wants_rdiff_backup_version'],
         t("rdiff-backup version mismatch. Got {ver}, but server needs {wants}. Please update your Lernsticks and/or Glados-server such that they share the same rdiff-backup version; either both 2.x, or both 1.2.x."))
 
-    if args.debug: print("Version check was successful!")
+    logger.debug("Version check was successful!")
 
     zenity_send(zenity_process, t('Setting up token request'))
 
@@ -712,8 +753,8 @@ if __name__ == '__main__':
     zenity_process.terminate()
 
     # finally open wxbrowser
-    if args.debug: print("Opening URL {0} in wxbrowser".format(url))
-    cmd = 'sudo -u user /usr/bin/wxbrowser --geometry "800x310" -c -n "{title}" -i "/usr/share/icons/oxygen/base/32x32/actions/system-search.png" "{url}"'.format(
+    logger.info(f"Opening URL {url} in wxbrowser")
+    cmd = 'sudo -u user /usr/bin/wxbrowser --geometry "800x310" -c -n "{title}" -i "/usr/share/icons/oxygen/base/128x128/actions/system-search.png" "{url}"'.format(
         title = t("Exam Client"),
         url = shlex.quote(url)
     )
