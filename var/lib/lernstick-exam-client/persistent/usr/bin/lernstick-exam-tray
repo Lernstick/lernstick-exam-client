@@ -9,8 +9,10 @@ import time # time.time()
 import collections # collections.deque()
 from datetime import datetime # datetime.strptime(), datetime.fromtimestamp()
 import requests # requests.get()
+import http # http.client
 import subprocess # subprocess.Popen()
 import locale
+import logging
 
 # append to the interpreter’s search path for modules
 directory = "/var/lib/lernstick-exam-client/"
@@ -52,11 +54,6 @@ messages = {
     }
 }
 
-# check the environment variables
-if not ('DISPLAY' in os.environ and 'XAUTHORITY' in os.environ and 'DBUS_SESSION_BUS_ADDRESS' in os.environ):
-    print('DISPLAY, XAUTHORITY and DBUS_SESSION_BUS_ADDRESS have to be available.', file = sys.stderr)
-    exit(1)
-
 # the language code
 lang = locale.getdefaultlocale()[0].split('_')[0] # eg: de, en, es, ...
 
@@ -71,7 +68,7 @@ def timestamp_ms():
     return round(time.time() * 1000)
 
 def sigusr1_handler(signal, frame):
-    print ("SIGUSR1 caught")
+    logger.debug("SIGUSR1 caught")
     try: f = open(SIGNAL_FILE, 'r') 
     except OSError: app.tray.onSignal(0, -2, 'no signal file')
     with f:
@@ -228,7 +225,7 @@ class TaskBarIcon(wx.adv.TaskBarIcon):
     # @param wx.CommandEvent event
     # @return bool whether network and backup are ok or not
     def onIntervalTimer(self, event):
-        if DEBUG: print("DEBUG> interval timer ticked")
+        logging.debug("interval timer ticked")
         network = self.notifyNetwork()
         backup = self.notifyBackup()
         self.updateIcon()
@@ -246,10 +243,9 @@ class TaskBarIcon(wx.adv.TaskBarIcon):
     # @param int error code
     # @param string msg debug message
     def onSignal(self, timestamp, code, msg):
-        if DEBUG:
-            print("DEBUG> code:", code)
-            print("DEBUG> timestamp:", timestamp)
-            print("DEBUG> msg:", msg)
+        logging.debug(f"code: {code}")
+        logging.debug(f"timestamp: {timestamp}")
+        logging.debug(f"msg: {msg}")
 
         if code == self.BACKUP_FAILED:
             self.systemNotification('error', _('The current backup has failed. Please contact your supervisor.'))
@@ -287,14 +283,14 @@ class TaskBarIcon(wx.adv.TaskBarIcon):
             'obj': notification
         })
         if notification.Show(timeout = 10) == False:
-            print("TODO: fallback notification")
+            logger.info("TODO: fallback notification")
 
     def onClick(self, event):
-        print ('Tray icon was clicked.')
+        logger.info("Tray icon was clicked.")
         self.PopupMenu(self.CreatePopupMenu())
 
     def onRightClick(self, event):
-        print ('Tray icon was right-clicked.')
+        logger.info("Tray icon was right-clicked.")
 
     def notifyBackup(self):
         since_started = abs(timestamp_ms() - self.exam_started)
@@ -353,6 +349,22 @@ class App(wx.App):
 
 
 if __name__ == '__main__':
+
+    # setup logging
+    logger = logging.getLogger("root") # create a logger called root
+    logger.setLevel(logging.DEBUG if DEBUG else logging.INFO)
+    ch = logging.StreamHandler() # create console handler
+    ch.setFormatter(helpers.TerminalColorFormatter()) # formatter of console handler
+    logger.addHandler(ch) # add handlers to logger
+    logging.captureWarnings(True) # also capture warnings from other libs
+    http.client.HTTPConnection.debuglevel = 1 if DEBUG else 0
+    http.client.print = lambda *args: logger.debug("http - "+" ".join(args)) # hook the print function in http to logger.debug
+
+    # check the environment variables
+    if not ('DISPLAY' in os.environ and 'XAUTHORITY' in os.environ and 'DBUS_SESSION_BUS_ADDRESS' in os.environ):
+        logger.error('DISPLAY, XAUTHORITY and DBUS_SESSION_BUS_ADDRESS have to be available.')
+        exit(1)
+
     app = App(False)
 
     # register the signal handler
