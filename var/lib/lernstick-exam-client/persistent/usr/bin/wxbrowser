@@ -26,8 +26,6 @@ def geometry(arg):
         raise argparse.ArgumentTypeError
     return tuple(map(int, arg.split('x')))
 
-_print = lambda *args, **kwargs: print("wxbrowser:", *args, **kwargs)
-
 class Window(wx.Frame):
     # derives a new class from Frame
     def __init__(self, *pargs, **kwargs):
