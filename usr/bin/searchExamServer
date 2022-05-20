@@ -413,7 +413,7 @@ if __name__ == '__main__':
     )
     parser.add_argument('-d', '--debug',
         help = 'enable debugging (prints a lot of messages to stdout).',
-        default = False,
+        default = True,
         action = "store_true"
     )
     parser.add_argument('-t', '--translation',
@@ -472,8 +472,6 @@ if __name__ == '__main__':
         s.bind(('localhost', 18493))
     except OSError:
         exit_with_error_message(t('Program is already running, exitting.'))
-        #logger.error('Program is already running, exitting.')
-        #sys.exit(1)
 
     signal.signal(signal.SIGINT, trap)
     signal.signal(signal.SIGTERM, trap)
