@@ -6,17 +6,19 @@ import json # json.load
 import re # re.compile(), re.match()
 import logging # logging.Formatter
 
+logger = logging.getLogger('root')
+
 ##
 # Class for the colored output of logging
 ##
-class ColorFormatter(logging.Formatter):
+class TerminalColorFormatter(logging.Formatter):
     grey = "\x1b[90;20m"
     default = "\x1b[39;20m"
     yellow = "\x1b[33;20m"
     red = "\x1b[31;20m"
     bold_red = "\x1b[31;1m"
     reset = "\x1b[0m"
-    fmt = "%(asctime)s - %(levelname)s - %(message)s (%(filename)s:%(lineno)d)"
+    fmt = "%(asctime)s - %(levelname)s - %(funcName)s - %(message)s (%(filename)s:%(lineno)d)"
 
     FORMATS = {
         logging.DEBUG: grey + fmt + reset,
@@ -37,7 +39,7 @@ class ColorFormatter(logging.Formatter):
 # @param string file the config file
 # @return mixed the variable or the value of default if not found
 ##
-def get_config (variable, default = None, file = '/config.json'):
+def get_config(variable, default = None, file = '/config.json'):
     with open(file) as json_file:
         data = json.load(json_file)
         try:
@@ -52,7 +54,7 @@ def get_config (variable, default = None, file = '/config.json'):
 # @param string file the info file
 # @return string|None the variable or None if not found
 ##
-def get_info (variable, file = '/info'):
+def get_info(variable, file = '/info'):
     cmd = 'set -a; source "{file}"; set +a; printf "%s" "${variable}"'.format(
         file = file,
         variable = variable)
@@ -67,7 +69,7 @@ def get_info (variable, file = '/info'):
 # @param string filter regex to filter the variable value by (first item that matches is returned)
 # @return string|False the variable or False if not found
 ##
-def get_env (variable, pid = '*', uid = '*', filter = r'.*'):
+def get_env(variable, pid = '*', uid = '*', filter = r'.*'):
     r = re.compile(filter)
     for file in glob.glob('/proc/{0}/environ'.format(pid)):
         if os.path.isfile(file) and (uid == '*' or os.stat(file).st_uid == uid):
@@ -88,7 +90,8 @@ def get_env (variable, pid = '*', uid = '*', filter = r'.*'):
 # @see https://docs.python.org/3/library/codecs.html#standard-encodings
 # @return bool, string the return value and the command output
 ##
-def run (cmd, env = {}, encoding = 'utf-8'):
+def run(cmd, env = {}, encoding = 'utf-8'):
+    logger.debug(f"running command: {cmd}")
     process = subprocess.Popen(['bash', '-c', cmd],
         env = env,
         stdout=subprocess.PIPE,
@@ -98,4 +101,8 @@ def run (cmd, env = {}, encoding = 'utf-8'):
     ret = True if process.returncode == 0 else False
     output = output if encoding == None else output.decode(encoding).strip()
     error = error if encoding == None else error.decode(encoding).strip()
+    l = logger.debug if ret else logger.error
+    l(f"exit code: {process.returncode}")
+    l(f"command stdout:{output if output else None}")
+    l(f"command stderr:{error if error else None}")
     return ret, output if ret else output + error
