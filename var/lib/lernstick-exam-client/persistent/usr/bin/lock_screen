@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
 import sys # sys.path.append()
+import os
+import subprocess
 
 # append to the interpreter’s search path for modules
 directory = "/var/lib/lernstick-exam-client/"
@@ -8,20 +10,58 @@ sys.path.append(directory)
 import functions as helpers # get_env(), run()
 
 INFO_FILE_URL = 'urlDownload'
+PID_FILE = '/run/lock/lernstick-exam-lock.pid'
 
-display = helpers.get_env("DISPLAY")
-xauthority = helpers.get_env("XAUTHORITY")
-env = {'DISPLAY': display, 'XAUTHORITY': xauthority}
+if __name__ == '__main__':
 
-url = helpers.get_info(INFO_FILE_URL)
-if url == None:
-    print('Variable "${variable}" not found in {file}.'.format(
-        variable = INFO_FILE_URL,
-        file = '/info'
-    ))
+    if os.getuid() != 0:
+        print("Only root is allowed to lock/unlock screen", file=sys.stderr)
+        exit(1)
+
+    env = {
+        'DISPLAY': helpers.get_env("DISPLAY"),
+        'XAUTHORITY': helpers.get_env("XAUTHORITY")
+    }
+
+    url = helpers.get_info(INFO_FILE_URL)
+    if url == None:
+        print(f'Variable "${INFO_FILE_URL}" not found in /info.')
+        exit(1)
+
+    url = url.replace('ticket/download', 'site/lock', 1)
+    cmd = [
+        '/usr/bin/wxbrowser',
+        '--fullscreen',
+        '-n', 'Lock',
+        '--class', 'lock',
+        '-p', PID_FILE,
+        '-i', '/usr/share/icons/oxygen/base/32x32/actions/system-search.png',
+        url
+    ]
+
+    if not os.path.isfile(PID_FILE):
+        subprocess.Popen(cmd)
+        exit(0)
+
+    if os.access(PID_FILE, os.R_OK):
+        with open(PID_FILE, 'r', encoding = 'utf-8') as f:
+            pid = str(f.read())
+
+            if pid:
+                try:
+                    os.kill(int(pid), 0)
+                except OSError:
+                    subprocess.Popen(cmd, env = env)
+                    exit(0)
+                else:
+                    print("Screen is alrady locked", file=sys.stderr)
+                    exit(1)
+            else:
+                print(f"Invalid pid {pid} in pid file {PID_FILE}", file=sys.stderr)
+                exit(1)
+
+    else:
+        print(f"Cannot read pid file {PID_FILE}", file=sys.stderr)
+        exit(1)
+
     exit(1)
-
-
-url = url.replace('ticket/download', 'result/view', 1)
-
-helpers.run('/usr/bin/wxbrowser --fullscreen -n "Lock" -i "/usr/share/icons/oxygen/base/128x128/actions/system-search.png" {url}'.format(url = url), env = env)
