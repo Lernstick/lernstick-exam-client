@@ -91,18 +91,24 @@ def get_env(variable, pid = '*', uid = '*', filter = r'.*'):
 # @return bool, string the return value and the command output
 ##
 def run(cmd, env = {}, encoding = 'utf-8'):
+    binary = os.path.basename(cmd.split()[0])
     logger.debug(f"running command: {cmd}")
     process = subprocess.Popen(['bash', '-c', cmd],
         env = env,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE
+        stdout = subprocess.PIPE,
+        stderr = subprocess.PIPE
     )
-    output, error = process.communicate()
+    try:
+        output, error = process.communicate()
+    except KeyboardInterrupt:
+        logger.error("command failed");
+        output, error = (b"", b"")
+
     ret = True if process.returncode == 0 else False
     output = output if encoding == None else output.decode(encoding).strip()
     error = error if encoding == None else error.decode(encoding).strip()
     l = logger.debug if ret else logger.error
-    l(f"exit code: {process.returncode}")
-    l(f"command stdout:{output if output else None}")
-    l(f"command stderr:{error if error else None}")
+    l(f"{binary} - exit code: {process.returncode}")
+    l(f"{binary} - command stdout:{output if output else None}")
+    l(f"{binary} - command stderr:{error if error else None}")
     return ret, output if ret else output + error
