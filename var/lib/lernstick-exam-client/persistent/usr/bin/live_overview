@@ -4,6 +4,8 @@ import sys # sys.path.append()
 import time # time.sleep()
 import requests # requests.get()
 from types import SimpleNamespace # json to python object
+import logging
+import http # http.client
 
 # append to the interpreter’s search path for modules
 directory = "/var/lib/lernstick-exam-client/"
@@ -16,70 +18,84 @@ stop_after = 10 # seconds (ideally multiple intervals, not only one)
 icon_size = "16x16"
 icon_fmt = "gif"
 VERBOSE = True
+LOG_LEVEL = logging.INFO
 
 max_duration = interval*600 # max_duration after stopping
 screenshot_cmd = 'import -silent -window root -resize "{width}" jpg:-'
 icon_cmd = "xprop -id {window_id} -notype 32c _NET_WM_ICON | perl -0777 -pe '@_=/\d+/g; printf \"P7\\nWIDTH %d\\nHEIGHT %d\\nDEPTH 4\\nMAXVAL 255\\nTUPLTYPE RGB_ALPHA\\nENDHDR\\n\", splice@_,0,2; $_=pack \"N*\", @_; s/(.)(...)/$2$1/gs' | convert - -geometry \"{icon_size}\" {icon_fmt}:-"
 INFO_FILE_URL = 'urlDownload'
 
-url = helpers.get_info(INFO_FILE_URL)
-if url == None:
-    print('Variable "${variable}" not found in {file}.'.format(
-        variable = INFO_FILE_URL,
-        file = '/info'
-    ))
-    exit(1)
+if __name__ == '__main__':
 
-url = url.replace('download', 'live', 1)
-display = helpers.get_env("DISPLAY")
-xauthority = helpers.get_env("XAUTHORITY")
+    # setup logging
+    logger = logging.getLogger("root") # create a logger called root
+    logger.setLevel(LOG_LEVEL)
+    ch = logging.StreamHandler() # create console handler
+    ch.setFormatter(helpers.TerminalColorFormatter()) # formatter of console handler
+    logger.addHandler(ch) # add handlers to logger
+    logging.captureWarnings(True) # also capture warnings from other libs
+    http.client.HTTPConnection.debuglevel = 1 if LOG_LEVEL == logging.DEBUG else 0
+    http.client.print = lambda *args: logger.debug("http - "+" ".join(args)) # hook the print function in http to logger.debug
 
-last_window_id, last_window, t0, t1, stop  = None, None, 0, 0, False
+    url = helpers.get_info(INFO_FILE_URL)
+    if url == None:
+        logger.critical('Variable "${variable}" not found in {file}.'.format(
+            variable = INFO_FILE_URL,
+            file = '/info'
+        ))
+        exit(1)
 
-if VERBOSE: print("starting live overview")
-for i in range(0, max_duration):
-    env = {'DISPLAY': display, 'XAUTHORITY': xauthority}
-    success, window_id = helpers.run('xdotool getactivewindow', env = env)
-    if success:
-        _, window = helpers.run('xdotool getactivewindow getwindowname', env = env)
-        if window_id != last_window_id:
-            _, icon = helpers.run(icon_cmd.format(
-                window_id = window_id,
-                icon_size = icon_size,
-                icon_fmt = icon_fmt
-            ), env = env, encoding = None)
+    url = url.replace('download', 'live', 1)
+
+    last_window_id, last_window, t0, t1, stop  = None, None, 0, 0, False
+
+    logger.info("starting live overview")
+    for i in range(0, max_duration):
+        env = {
+            'DISPLAY': helpers.get_env("DISPLAY"),
+            'XAUTHORITY': helpers.get_env("XAUTHORITY")
+        }
+        success, window_id = helpers.run('xdotool getactivewindow', env = env)
+        if success:
+            _, window = helpers.run('xdotool getactivewindow getwindowname', env = env)
+            if window_id != last_window_id:
+                _, icon = helpers.run(icon_cmd.format(
+                    window_id = window_id,
+                    icon_size = icon_size,
+                    icon_fmt = icon_fmt
+                ), env = env, encoding = None)
+            else:
+                icon = None
         else:
-            icon = None
-    else:
-        window, icon = '', ''
+            window, icon = '', ''
 
-    _, img = helpers.run(screenshot_cmd.format(width = width), env = env, encoding = None)
-    data, files = {}, {'img': img}
-    if last_window != window: data['window'] = window
-    if icon != None: files['icon'] = icon
-    last_window, last_window_id = window, window_id
+        _, img = helpers.run(screenshot_cmd.format(width = width), env = env, encoding = None)
+        data, files = {}, {'img': img}
+        if last_window != window: data['window'] = window
+        if icon != None: files['icon'] = icon
+        last_window, last_window_id = window, window_id
 
-    if VERBOSE: print("hitting {0} width data {1} and files {2}".format(url, data, files.keys()))
-    try: response = requests.post(url, files = files, data = data, timeout=10).json(object_hook=lambda d: SimpleNamespace(**d))
-    except:
-        time.sleep(5) # wait for 5 seconds
-        continue
+        logger.info(f"hitting {url} width data {data} and files {files.keys()}")
+        try: response = requests.post(url, files = files, data = data, timeout = 10).json(object_hook =lambda d: SimpleNamespace(**d))
+        except:
+            time.sleep(5) # wait for 5 seconds
+            continue
 
-    if hasattr(response, 'interval'): interval = response.interval
-    if hasattr(response, 'width'): width = response.width
+        if hasattr(response, 'interval'): interval = response.interval
+        if hasattr(response, 'width'): width = response.width
 
-    if hasattr(response, 'stop'):
-        if stop == False:
-            t0, t1 = time.perf_counter(), 0
+        if hasattr(response, 'stop'):
+            if stop == False:
+                t0, t1 = time.perf_counter(), 0
+            else:
+                t1 = time.perf_counter() - t0
+            stop = response.stop
         else:
-            t1 = time.perf_counter() - t0
-        stop = response.stop
-    else:
-        stop, t1 = False, 0
+            stop, t1 = False, 0
 
-    if VERBOSE: print("width:{0}, interval:{1}, stop:{2}, elasped:{3}, response:{4}".format(width, interval, stop, t1, response))
-    if stop and t1 > stop_after:
-        if VERBOSE: print("stopping live overview")
-        exit()
+        logger.info(f"response:{vars(response)}, stop:{stop}, elasped:{t1}")
+        if stop and t1 > stop_after:
+            logger.info("stopping live overview")
+            exit(0)
 
-    time.sleep(interval)
+        time.sleep(interval)
