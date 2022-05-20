@@ -5,7 +5,7 @@ import wx # wx.App(), wx.Frame()
 import wx.html2 # wx.html2.WebView
 import re # re.comple(), re.match()
 import argparse # argparse.ArgumentParser()
-import os # os.system()
+import os # os.system(), os.getpid()
 import json # dumps() quote strings into a javascript literal
 import logging
 
@@ -131,7 +131,7 @@ class Window(wx.Frame):
         logger.debug("script {0} executed: exit code {1}".format(args.script[0], retval))
         exec_js = js_triggerEvent.format(json.dumps(output) if retval else 'false')
         if retval == False: logger.error(f"script failed: {output}")
-        logger.debug("executing javascript: {0}".formart((exec_js[:75] + ' ...') if len(exec_js) > 75 else exec_js))
+        logger.debug("executing javascript: {0}".format((exec_js[:75] + ' ...') if len(exec_js) > 75 else exec_js))
         self.browser.RunScript(exec_js)
         return retval
 
@@ -148,6 +148,8 @@ if __name__ == '__main__':
     parser.add_argument("--retries", "-r", help="number of retries on fail, (set -1 for infinite retries)", type=int, default=0)
     parser.add_argument("--retry-delays", "-d", help="delay for each retries in sec (index 0 is for the delay of the initial request), default is 0 3 3 ...", type=int, nargs='+', dest='retry_delays', default=[0, 3])
     parser.add_argument("--script", "-s", nargs=2, help='run a script in the background and feed its output as an event "wxbrowser:script" into the javascript of the running page. Listen to this event by $(document).on("wxbrowser:script", function(e, json) {...}, where json contains the output as a string.', metavar='PATH INTERVAL')
+    parser.add_argument("--pid-file", "-p", help="file to write the pid to", metavar='PATH', default=None)
+
     arg_group = parser.add_mutually_exclusive_group()
     arg_group.add_argument("--geometry", "-g", help="the width and height in pixels", type=geometry, metavar='WIDTHxHEIGHT')
     arg_group.add_argument("--fullscreen", "-f", help="show the window in fullscreen", action="store_true")
@@ -164,6 +166,16 @@ if __name__ == '__main__':
 
     # set the WM_CLASS name
     sys.argv[0] = args.wm_class
+
+    # write the pid file if the argument is set
+    if args.pid_file is not None:
+        pid = os.getpid()
+        try:
+            with open(args.pid_file, 'w', encoding = 'utf-8') as f:
+                f.write(str(pid))
+        except OSError as e:
+            logger.error(f"Cannot write pid file {args.pid_file}")
+            logger.error(repr(e))
 
     app = wx.App(False)
     window = Window(None, -1)
