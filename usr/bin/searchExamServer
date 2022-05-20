@@ -312,6 +312,7 @@ def exit_with_error_message(mesg, **kwargs):
         'no-markup': True
     }
     kwargs = {**default_args, **kwargs} # merge the args, where the second has priority
+
     helpers.run(zenity(**kwargs), env = env)
     clean_exit(mesg, exit_code = 1)
 
@@ -412,7 +413,7 @@ if __name__ == '__main__':
     )
     parser.add_argument('-d', '--debug',
         help = 'enable debugging (prints a lot of messages to stdout).',
-        default = True,
+        default = False,
         action = "store_true"
     )
     parser.add_argument('-t', '--translation',
@@ -470,8 +471,9 @@ if __name__ == '__main__':
     try:
         s.bind(('localhost', 18493))
     except OSError:
-        logger.error('Program is already running, exitting.')
-        sys.exit(1)
+        exit_with_error_message(t('Program is already running, exitting.'))
+        #logger.error('Program is already running, exitting.')
+        #sys.exit(1)
 
     signal.signal(signal.SIGINT, trap)
     signal.signal(signal.SIGTERM, trap)
@@ -752,7 +754,8 @@ if __name__ == '__main__':
 
     # finally open wxbrowser
     logger.info(f"Opening URL {url} in wxbrowser")
-    cmd = 'sudo -u user /usr/bin/wxbrowser -v --geometry "800x310" -c -n "{title}" -i "/usr/share/icons/oxygen/base/128x128/actions/system-search.png" "{url}"'.format(
+    cmd = 'sudo -u user /usr/bin/wxbrowser {debug} --geometry "800x310" -c -n "{title}" -i "/usr/share/icons/oxygen/base/128x128/actions/system-search.png" "{url}"'.format(
+        debug = '-v' if args.debug else '',
         title = t("Exam Client"),
         url = shlex.quote(url)
     )
