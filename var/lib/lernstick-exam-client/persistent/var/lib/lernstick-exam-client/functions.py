@@ -4,6 +4,7 @@ import glob # glob.glob()
 import subprocess # subprocess.check_output(), subprocess.call()
 import json # json.load
 import re # re.compile(), re.match()
+import shlex # quote() strings for shell command
 import logging # logging.Formatter
 
 logger = logging.getLogger('root')
