@@ -60,9 +60,10 @@ if __name__ == '__main__':
     cenv = {**env, **{'LC_ALL': 'C'}} 
     urlNotify = helpers.get_info("urlNotify", infoFile)
 
-    if not args.debug:
+    if args.debug:
         zcmd = helpers.zenity(**{
             'question': True,
+            'width': 300,
             'title': 'Continue',
             'text': 'The system setup is done. Continue?'
         })
@@ -75,6 +76,7 @@ if __name__ == '__main__':
         zcmd = helpers.zenity(**{
             'progress': True,
             'no_cancel': True,
+            'width': 300,
             'title': 'Continue',
             'text': 'The system will continue in 10 seconds',
             'percentage': 0,
