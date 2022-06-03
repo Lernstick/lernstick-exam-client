@@ -120,3 +120,8 @@ def run(cmd, env = {}, encoding = 'utf-8'):
     l(f"{binary} - command stdout:{output if output else None}")
     l(f"{binary} - command stderr:{error if error else None}")
     return ret, output if ret else output + error
+
+# equivalent to PHPs file_put_contents
+def file_put_contents(file, contents, append = False):
+    with open(file, 'a' if append else 'w') as f:
+        return f.write(contents)
