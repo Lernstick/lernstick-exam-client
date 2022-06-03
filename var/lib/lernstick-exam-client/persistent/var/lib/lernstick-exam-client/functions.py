@@ -125,3 +125,9 @@ def run(cmd, env = {}, encoding = 'utf-8'):
 def file_put_contents(file, contents, append = False):
     with open(file, 'a' if append else 'w') as f:
         return f.write(contents)
+
+# unique all lines in file
+def unique_lines(file):
+    with open(file) as f:
+        lines = f.readlines()
+        file_put_contents(file, ''.join(set(lines)))
