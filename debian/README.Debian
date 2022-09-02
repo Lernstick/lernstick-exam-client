@@ -3,7 +3,7 @@ lernstick-exam-client for Debian
 
 Needed packages to build:
 
- aot install config-package-dev git-buildpackage
+ apt install config-package-dev git-buildpackage
 
 Update the version in usr/share/lernstick-exam-client/compatibility.json
 
