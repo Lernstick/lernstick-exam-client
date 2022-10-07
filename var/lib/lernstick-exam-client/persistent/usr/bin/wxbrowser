@@ -105,7 +105,7 @@ class Window(wx.Frame):
             return exit() # exits immediately, self.Close() or self.Destroy() are waiting for an event to process
         elif action == 'shutdown':
             logger.debug("shutting down")
-            os.system("/sbin/shutdown now -h")
+            os.system("systemctl poweroff -i") # ignore shutodwn inhibitors
         else:
             logger.warning("action {0} not found".format(action))
 
