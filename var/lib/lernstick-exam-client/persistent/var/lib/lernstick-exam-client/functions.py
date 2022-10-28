@@ -19,7 +19,7 @@ class TerminalColorFormatter(logging.Formatter):
     red = "\x1b[31;20m"
     bold_red = "\x1b[31;1m"
     reset = "\x1b[0m"
-    fmt = "%(asctime)s - %(levelname)s - %(funcName)s - %(message).400s (%(filename)s:%(lineno)d)"
+    fmt = "%(asctime)s - %(levelname)s - %(filename)s:%(funcName)s - %(message).400s (%(filename)s:%(lineno)d)"
 
     FORMATS = {
         logging.DEBUG: grey + fmt + reset,
