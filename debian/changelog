@@ -1,3 +1,87 @@
+lernstick-exam-client (1.0.19) lernstick-9; urgency=medium
+
+  * [164502] show_info with wxbrowser
+  * [80783e] remove echo
+  * [c218ff] added shutdown command to wxbrowser
+  * [13c48f] resize fixed in wxbrowser
+  * [598f98] removed statusbar from wxbrowser (caused problems when resizing)
+  * [f22a6c] removed event.Target
+  * [1e1cf5] finish exam with wxbrowser
+  * [1a1134] 2 new options in the dropdown (show_info and finishExam)
+  * [e6cb13] fixed horrendously large number of minutes in notification message
+  * [d575cd] simple i18n for the tray
+  * [0ed99e] Started with python version of searchExamServer
+  * [600ec9] towards finishing searchExamServer in python3
+  * [f3cb1e] check for glados info dict
+  * [412b4c] zenity as a function
+  * [9b5e80] sanitized shell commands
+  * [90fb12] removed tkinter
+  * [1e4d0e] cleanup sshkey
+  * [b4b98e] wxbrowser as a link (only one version
+  * [4defe7] print prepend with "wxbrowser:"
+  * [b279df] retry and delay feature added
+  * [b0e1e5] -1 for infinite retries
+  * [137ca4] retry and delay added
+  * [877b30] Update functions.py
+  * [68eaa9] replaced searchExamServer shell script with python variant
+  * [765791] remove the intermediate python variant
+  * [dd623b] removed old gettext stuff
+  * [71858f] Update functions.py
+  * [059215] removed env variable (use os.environ instead)
+  * [4e19ba] os.environ + i18n
+  * [520c78] added "call script in interval and feed to js" feature
+  * [5787a2] script to poll open windows
+  * [1d852a] Update finish_exam.desktop
+  * [2cbecb] removed unnecessary noise in finishExam
+  * [3e4d54] added error output to run()
+  * [298cf2] Update README.Debian
+  * [617609] removed gettext.sh files
+  * [384cb1] wxbrowser helpers path fixed when not in exam
+  * [9ec51d] poll needs execute permissions
+  * [8f9ab0] new dependencies
+  * [8e4c48] zenity with --no-markup
+  * [874945] new url_whitelist file for lernstick firewall, see https://github.com/Lernstick/lernstick-firewall/commit/b0c226aea80374e6767a2d85f225344bd8aabbde
+  * [45db08] xdotool as dependency (needed by live_overview)
+  * [0ab97e] wxbrowser needs smaller icons
+  * [c93ccb] wxbrowser needs smaller icons <=32x32
+  * [ced899] wxbrowser needs smaller icons <= 32x32
+  * [e9d09f] added default logging formatter
+  * [064e44] logging to stdout/stderr and file
+  * [d55572] added logging
+  * [d85c93] Update searchExamServer
+  * [0406a6] added logging
+  * [9e7ad1] catch exception in run()
+  * [3a9c1a] Update searchExamServer
+  * [0f6474] debug=true by default
+  * [962374] removed unnecessary _print function
+  * [1f80ca] abort in an exam
+  * [7d59c2] small fix
+  * [77582e] added FileFormatter
+  * [78498b] logging added
+  * [0f13f3] logging added
+  * [17ae53] fixed lock_sceen
+  * [d374ee] Create unlock_screen
+  * [ef6e28] quotes
+  * [58cf96] possibility to add a pid file argument
+  * [a91a2c] truncation of lines after 200 characters in TerminalColorFormatter
+  * [bcd7a8] added logging
+  * [b2ef4a] added file_put_contents()
+  * [f6fce3] unique_lines() added
+  * [b76760] added zenity function
+  * [201948] Create setup_busybox.sh
+  * [1e8e3c] Update functions.py
+  * [82c7a7] Create setup_done.py
+  * [7ce882] Update setup_done.py
+  * [1203ba] typo
+  * [385759] adjusted fiel modes to 755
+  * [507561] into about the icon extraction command
+  * [42bbf5] ignore shutodwn inhibitors
+  * [46490b] search in the theme file
+  * [30b39d] added script-filename to logfile output
+  * [8ea1d9] added a 5 seconds delay for the launcher
+
+ -- Roman Gruber <roman.gruber@bfh.ch>  Fri, 11 Nov 2022 11:22:29 +0200
+
 lernstick-exam-client (1.0.18) lernstick-9; urgency=medium
 
   * [28899f] https support in avahi-browse
