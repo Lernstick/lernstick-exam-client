@@ -1,3 +1,9 @@
+lernstick-exam-client (1.0.20) lernstick-9; urgency=medium
+
+  * [086b04] added actionInfo for fixed configfile
+
+ -- Roman Gruber <roman.gruber@bfh.ch>  Fri, 02 Dec 2022 10:51:28 +0100
+
 lernstick-exam-client (1.0.19) lernstick-9; urgency=medium
 
   * [164502] show_info with wxbrowser
