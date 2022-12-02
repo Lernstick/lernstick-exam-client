@@ -525,6 +525,9 @@ if __name__ == '__main__':
         for action in actions:
             glados[f"action{action}"] = "{gladosProto}://{gladosHost}:{gladosPort}/{0}".format(glados[f"action{action}"], **glados)
 
+        # get the info URL manually
+        glados["actionInfo"] = glados["actionSSHKey"].replace('/ticket/ssh-key', '/config/info')
+
         # check if there is a route to the ip addess of glados
         retval, glados['interface'] = helpers.run("ip -s route get {gladosIp} | perl -ne 'print $1 if /dev[\s]+([^\s]+)/'".format(**glados_shell))
 
